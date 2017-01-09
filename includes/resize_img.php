@@ -78,7 +78,7 @@ function knews_resize_img_fn($url_img, $width, $height, $media_id=0) {
 	}
 
 	$pos = strrpos($url_img, "-");
-	if ($pos !== false) { 
+	if ($pos !== false && strrpos($url_img, "x") != false && strrpos($url_img, "x") > $pos + 1) { 
 		$pos2 = strrpos($url_img, ".");
 		
 		if ($pos2 !== false) { 

@@ -71,6 +71,8 @@ function knews_save_prefs() {
 		} else {
 			echo '<div class="updated"><p><strong>' . __('Saved.','knews') . '</strong></p></div>';
 		}
+	}
+	if (isset($_POST['update_KnewsAdminSettingsAdv'])) {
 
 		if (!wp_next_scheduled('knews_wpcron_function_hook')) {
 			if ($knewsOptions['knews_cron']=='cronwp') {
@@ -256,7 +258,7 @@ if ($Knews_plugin->get_safe('tab')=='custom') {
 			<script type="text/javascript">
 			jQuery(document).ready( function () {
 				jQuery('a#test_smtp_pro').click(function() {
-					jQuery('div.resultats_test_pro').html('<p><blink><?php _e('Sending','knews');?>...</blink></p>');
+					jQuery('div.resultats_test_pro').html('<p><blink><?php echo $Knews_plugin->escape_js(__('Sending','knews'), "'");?>...</blink></p>');
 					jQuery.ajax({
 						data: {
 							//email_test: jQuery('input#email_test').val(),
@@ -276,7 +278,7 @@ if ($Knews_plugin->get_safe('tab')=='custom') {
 						url: "<?php echo get_admin_url(); ?>admin-ajax.php",
 						success: function(data) {
 							if (data==0) {
-								jQuery('div.resultats_test_pro').html('<p><?php _e('Submit error.','knews'); ?></p>');
+								jQuery('div.resultats_test_pro').html('<p><?php echo $Knews_plugin->escape_js(__('Submit error.','knews'), "'"); ?></p>');
 							} else {
 								jQuery('div.resultats_test_pro').html('');
 								tb_show('', '<?php echo get_admin_url(); ?>admin-ajax.php?action=knewsSpamcheck2&unique=' + data + '&amp;TB_iframe=true&amp;width=640&amp;height=' + (parseInt(jQuery(parent.window).height(), 10)-100));
@@ -287,7 +289,7 @@ if ($Knews_plugin->get_safe('tab')=='custom') {
 				});
 
 				jQuery('input#test_smtp').click(function() {
-					jQuery('div.resultats_test').html('<p><blink><?php _e('Sending','knews');?>...</blink></p>');
+					jQuery('div.resultats_test').html('<p><blink><?php echo $Knews_plugin->escape_js(__('Sending','knews'), "'");?>...</blink></p>');
 					jQuery.ajax({
 						data: {
 							email_test: jQuery('input#email_test').val(),
@@ -371,7 +373,7 @@ if ($Knews_plugin->get_safe('tab')=='custom') {
 				<p>* <?php _e('Pay attention: If your SMTP server is anonymous leave SMTP User and SMTP Password fields blank','knews');?></p>
 			</div>
 			<div style="width:300px; float:left; padding-left:20px;">
-				<h3 style="margin-top:0">Real Spam Test <a href="http://knewsplugin.com/real-spam-test-for-smtp-configuration-and-newsletters/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank" rel="noreferrer" title="Learn Real Spam Test"></a></h3>
+				<h3 style="margin-top:0">Real Spam Test <a href="<?php echo (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on' ? 'https://' : 'http://'); ?>knewsplugin.com/real-spam-test-for-smtp-configuration-and-newsletters/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank" rel="noreferrer" title="Learn Real Spam Test"></a></h3>
 				<p>Knews will use this values to send a test email and give you a full live report: <strong>Spam Assassin</strong> real results + <strong>Knews values</strong> analysis.</p>
 				<div class="resultats_test_pro"></div>
 				<p><a href="#" class="button" id="test_smtp_pro">Real Spam Test</a></p>
@@ -388,18 +390,25 @@ if ($Knews_plugin->get_safe('tab')=='custom') {
 			<div style="clear:both"></div>
 			<p><?php _e('Load SMTP defaults:','knews'); ?> <a href="#" onclick="knews_conf('gmail')"><?php _e('Gmail SMTP','knews'); ?></a> | <a href="#" onclick="knews_conf('1and1')"><?php _e('My hosting is 1&1','knews'); ?></a> | <a href="#" onclick="knews_conf('godaddy')"><?php _e('My Hosting is GoDaddy','knews'); ?></a> |  <a href="#" onclick="knews_conf('yahoo')"><?php _e('Yahoo SMTP','knews'); ?></a></p>
 				<div class="knews_updated"><p><?php printf(__('The e-mails submited to any e-mail terminated with @knewstest.com (like testing001@knewstest.com or xxx@knewstest.com) will be submited to: %s for your testing purposes','knews'), get_option('admin_email')); ?></p></div>
-				<?php 
-				$rewrite_base = get_bloginfo('url');
-				if (substr($rewrite_base, -1) != '/') $rewrite_base .= '/';
-				$rewrite_base = substr($rewrite_base, strpos($rewrite_base, '/', 7) );
-				?>
 			</div>
 			<div class="tabbed_content tab_3"<?php if ($subtab!=3) echo ' style="display:none"'; ?>>
+				<?php 
+				$rewrite_base = is_multisite() ? network_site_url() : get_bloginfo('url');
+				if (substr($rewrite_base, -1) != '/') $rewrite_base .= '/';
+				$rewrite_base = substr($rewrite_base, strpos($rewrite_base, '/', 8) );
+				?>
 				<h3>This feature needs modification of your <strong>.htaccess</strong> file.</h3>
 				<p>Please, take care: any modification in the WordPress permalinks options can overwrite this file.</p>
 				<p>A mistake in this file can leave your WordPress down, <strong>please, make a backup of .htaccess file before do this modification</strong></p>
-				<p>You should insert the red lines in your .htaccess file, should be in your WordPress root folder:</p>
-				<pre style="border:#ddd 1px solid; background:#eee; border-radius:5px; padding:10px; overflow:auto;"># BEGIN WordPress<br />&lt;IfModule mod_rewrite.c&gt;<br />RewriteEngine On<br />RewriteBase <?php echo $rewrite_base; ?><br /><span style="color:#e00;">#Begin Knews (add this lines just after the RewriteBase line)<br />RewriteRule ^<?php echo KNEWS_WP_CONTENT; ?>/uploads/knewsimages/([^/]+).(jpg|jpeg|gif|png)$ <?php echo $rewrite_base . KNEWS_WP_CONTENT; ?>/plugins/knews/direct/track.php?img=$1 [L,NC]<br />#End Knews (that's all, your htaccess should continue as is...)</span><br />.<br />.<br />.</pre>
+				<p>You should insert the red lines <strong>before</strong> # BEGIN Wordpress in your .htaccess file, should be in your WordPress root folder:</p>
+				<div style="border:#ddd 1px solid; background:#eee; border-radius:5px; padding:10px; overflow:auto; font-family:'Open Sans', sans-serif; font-size:13px; margin-bottom:20px;"><span style="color:#e00;"># Begin Knews<br />&lt;IfModule mod_rewrite.c&gt;<br />RewriteEngine On<br />RewriteBase <?php echo $rewrite_base; ?><br />RewriteRule ^<?php echo KNEWS_WP_CONTENT; ?>/uploads/knewsimages/([^/]+).(jpg|jpeg|gif|png)$ <?php echo $rewrite_base . KNEWS_WP_CONTENT; ?>/plugins/knews/direct/track.php?img=$1 [L,NC]<br /><?php
+				
+				//if ($Knews_plugin->im_networked()) {
+				if (is_multisite()) {
+				?><br />#Multisite support rule<br />RewriteRule ^([^/]+)/<?php echo KNEWS_WP_CONTENT; ?>/uploads/sites/([^/]+)/knewsimages/([^/]+).(jpg|jpeg|gif|png)$ <?php echo $rewrite_base . KNEWS_WP_CONTENT; ?>/plugins/knews/direct/track.php?site=$1&site_id=$2&img=$3 [L,NC]<br /><?php
+				}
+				
+				?>&lt;/IfModule&gt;<br /># End Knews</span><br /><br /># BEGIN WordPress<br />.<br />.<br />.</div>
 				<?php
 				$wp_dirs = wp_upload_dir();
 				$img_track = $wp_dirs['baseurl'] . '/knewsimages/testcat.jpg';

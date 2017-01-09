@@ -181,6 +181,8 @@ $sql =	"CREATE TABLE " .KNEWS_AUTOMATED . " (
 		exclude_tags varchar(255) NOT NULL DEFAULT '',
 		include_postypes varchar(255) NOT NULL DEFAULT '',
 
+		submit_time varchar(5) NOT NULL DEFAULT '00:00',
+
 		UNIQUE KEY id (id)
 	   )$charset_collate;";
 	   

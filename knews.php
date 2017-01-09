@@ -3,10 +3,12 @@
 Plugin Name: K-news
 Plugin URI: http://www.knewsplugin.com
 Description: Finally, newsletters are multilingual, quick and professional.
-Version: 1.7.6
+Version: 1.8.2
 Author: Carles Reverter
 Author URI: http://www.carlesrever.com
 License: GPLv2 or later
+Text Domain: knews
+Domain Path: /languages
 */
 
 /*
@@ -236,6 +238,12 @@ if (!class_exists("KnewsPlugin")) {
 			define('KNEWS_NEWSLETTERS_SUBMITS', $wpdb->base_prefix . 'knewsubmits');
 			define('KNEWS_DIR', dirname(__FILE__));
 			$url = plugins_url();
+
+			/* fixing protocol when CRON call http and site is https */
+			$protocol = 'http://';
+			if (substr(home_url(),0,8)=='https://') $protocol = 'https://';
+			$url = $protocol . substr($url, strpos($url, '://')+3);
+
 			if ($blog_id != 0 && $this->im_networked()) $url = $this->get_right_blog_path($blog_id) . KNEWS_WP_CONTENT . '/plugins';
 			define('KNEWS_URL', $url . '/knews');
 			$this->knews_load_plugin_textdomain();
@@ -247,6 +255,9 @@ if (!class_exists("KnewsPlugin")) {
 		}
 		
 		function init($blog_id=0) {
+			if ($this->initialized) return;
+			$this->initialized = true;
+			
 			global $knewsOptions, $wpdb;
 			if ($blog_id != 0 && $this->im_networked() ) switch_to_blog($blog_id);
 			
@@ -293,7 +304,11 @@ if (!class_exists("KnewsPlugin")) {
 			define('KNEWS_LOCALIZED_URL', $knews_localized_url);
 			define('KNEWS_LOCALIZED_ADMIN', $knews_localized_admin);
 
-			$this->initialized = true;
+			if (is_admin()) {
+				//Some rude plugins deactivate Knews crons
+				if ($knewsOptions['knews_cron'] == 'cronwp' && !wp_next_scheduled('knews_wpcron_function_hook')) wp_schedule_event( time(), 'knewstime', 'knews_wpcron_function_hook');
+				if (!wp_next_scheduled('knews_wpcron_automate_hook')) wp_schedule_event( time(), 'hourly', 'knews_wpcron_automate_hook');
+			}
 		}
 		
 		function im_networked() {
@@ -492,7 +507,18 @@ if (!class_exists("KnewsPlugin")) {
 			global $wpdb;
 			$insert = $wpdb->insert_id; 
 			if ($insert == 0) {
-				$insert = mysql_insert_id(); ;
+				$mysqli = false;
+				//from $wbdb class
+				if ( function_exists( 'mysqli_connect' ) ) {
+					if ( defined( 'WP_USE_EXT_MYSQL' ) ) {
+						$mysqli = ! WP_USE_EXT_MYSQL;
+					} elseif ( version_compare( phpversion(), '5.5', '>=' ) || ! function_exists( 'mysql_connect' ) ) {
+						$mysqli = true;
+					} elseif ( false !== strpos( $GLOBALS['wp_version'], '-' ) ) {
+						$mysqli = true;
+					}
+				}
+				if (!$mysqli) $insert = mysql_insert_id();
 			}
 			return $insert;
 		}
@@ -504,10 +530,10 @@ if (!class_exists("KnewsPlugin")) {
 			if ($format=='mysql') $date = $this->sql2time($date);
 
 			$gmt_offset = intval(get_option('gmt_offset')) * 60 * 60;
-			//$date = $date + $gmt_offset;
+			$date = $date + $gmt_offset;
 			
 			$day = 60*60*24;
-			$today_start = mktime (0,0,0,date('n'),date('j'),date('Y')) + $gmt_offset;
+			$today_start = mktime (0,0,0,date('n'),date('j'),date('Y')); // + $gmt_offset;
 
 			$diference = $date - $today_start;
 
@@ -1525,7 +1551,7 @@ if (!function_exists("Knews_plugin_ap")) {
 
 	if (class_exists("KnewsPlugin")) {
 		$Knews_plugin = new KnewsPlugin();
-		define('KNEWS_VERSION', '1.7.6');
+		define('KNEWS_VERSION', '1.8.2');
 
 		add_filter( 'knews_submit_confirmation', array($Knews_plugin, 'submit_confirmation'), 10, 5 );
 		add_filter( 'knews_add_user_db', array($Knews_plugin, 'add_user_db'), 10, 7 );
@@ -1541,10 +1567,6 @@ if (!function_exists("Knews_plugin_ap")) {
 	
 			if (is_admin()) {
 				$Knews_plugin->knews_load_plugin_textdomain();
-
-				//Some rude plugins deactivate Knews crons
-				if (!wp_next_scheduled('knews_wpcron_function_hook')) wp_schedule_event( time(), 'knewstime', 'knews_wpcron_function_hook');
-				if (!wp_next_scheduled('knews_wpcron_automate_hook')) wp_schedule_event( time(), 'hourly', 'knews_wpcron_automate_hook');
 			}
 	
 			//Can't see the Knews admin menu? Try to define KNEWS_MENU_POS with another random value in your wp-config.php or functions.php theme!!!
@@ -1564,7 +1586,7 @@ if (!function_exists("Knews_plugin_ap")) {
 			add_submenu_page( 'knews_news', __('Auto-create','knews'), __('Auto-create','knews'), ($pro_menus ? 'knews_configure' : 'edit_posts'), 'knews_auto', array(&$Knews_plugin, 'KnewsAdminAuto'), '');
 			add_submenu_page( 'knews_news', __('Stats','knews'), __('Stats','knews'), ($pro_menus ? 'knews_see_stats' : 'edit_posts'), 'knews_stats', array(&$Knews_plugin, 'KnewsAdminStats'), '');
 			add_submenu_page( 'knews_news', __('Configuration','knews'), __('Configuration','knews'), ($pro_menus ? 'knews_configure' : 'edit_posts'), 'knews_config', array(&$Knews_plugin, 'KnewsAdminConfig'), '');
-			add_submenu_page( 'knews_news', __('Prioritary Support','knews'), __('Prioritary Support','knews'), 'edit_posts', ($Knews_plugin->im_pro() ? 'knews_support' : 'knews_config&tab=pro'), array(&$Knews_plugin, 'KnewsAdminSupport'), '');
+			add_submenu_page( 'knews_news', __('Priority Support','knews'), __('Priority Support','knews'), 'edit_posts', ($Knews_plugin->im_pro() ? 'knews_support' : 'knews_config&tab=pro'), array(&$Knews_plugin, 'KnewsAdminSupport'), '');
 
 			$registered_templates = apply_filters('knews_registered_templates','');
 			if (is_array($registered_templates)) {
@@ -1650,6 +1672,17 @@ if (!function_exists("Knews_plugin_ap")) {
 			add_thickbox();
 		}
 
+		if ($Knews_plugin->get_safe('page')=='knews_news' && $Knews_plugin->get_safe('section')=='edit') {
+			if (! $Knews_plugin->initialized) $Knews_plugin->init();
+			wp_enqueue_style( 'farbtastic' );
+			wp_enqueue_script( 'farbtastic' );
+			
+			wp_enqueue_style( 'knews-parent-editor-css', KNEWS_URL . '/wysiwyg/parent_editor.css', array(), KNEWS_VERSION );
+			wp_enqueue_script( 'knews-parent-editor-js', KNEWS_URL . '/wysiwyg/parent_editor.js', array( 'farbtastic', 'jquery' ), KNEWS_VERSION ); 
+			//wp_enqueue_style( 'wp-color-picker');
+			//wp_enqueue_script( 'wp-color-picker');
+		}
+
 		//wp_enqueue_script('media-upload');
 		if ( get_bloginfo( 'version' ) >= '3.5' && $Knews_plugin->get_safe('page')=='knews_news' && $Knews_plugin->get_safe('section')=='edit') {
 			wp_enqueue_media();
@@ -1679,21 +1712,21 @@ if (!function_exists("Knews_plugin_ap")) {
 		
 		//Deprecated, start:
 		if ($Knews_plugin->get_safe('subscription')=='ok' || $Knews_plugin->get_safe('subscription')=='error' || $Knews_plugin->get_safe('unsubscribe')=='ok' || $Knews_plugin->get_safe('unsubscribe')=='error') {
-			define ('KNEWS_POP_DIALOG', true);
+			if (!defined ('KNEWS_POP_DIALOG')) define ('KNEWS_POP_DIALOG', true);
 		}
 		//Deprecated, end.
 		if ($Knews_plugin->get_safe('knews')=='confirmUser') {
 			$knews_subscription_result = $Knews_plugin->confirm_user_self();
-			define ('KNEWS_POP_DIALOG', true);
+			if (!defined ('KNEWS_POP_DIALOG')) define ('KNEWS_POP_DIALOG', true);
 		}
 		if ($Knews_plugin->get_safe('knews')=='unsubscribe') {
 			$knews_block_result = $Knews_plugin->block_user_self();
-			define ('KNEWS_POP_DIALOG', true);
+			if (!defined ('KNEWS_POP_DIALOG')) define ('KNEWS_POP_DIALOG', true);
 		}
 
 		//if ($Knews_plugin->get_safe('knewspophome')=='1'
 		if ( $Knews_plugin->get_safe('knews')=='readEmail') {
-			define('KNEWS_POP_NEWS', true);
+			if (!defined ('KNEWS_POP_NEWS')) define('KNEWS_POP_NEWS', true);
 			?>
 			<script type="text/javascript">
 			jQuery(document).ready(function() {
@@ -1784,8 +1817,10 @@ if (!function_exists("Knews_plugin_ap")) {
 		global $Knews_plugin, $knewsOptions;
 		if (! $Knews_plugin->initialized) $Knews_plugin->init();
 
-		$value=$Knews_plugin->post_safe('knews_automated_post', $knewsOptions['def_autom_post'], 0, 'int');
-		update_post_meta($postID, '_knews_automated', $value);
+		if (isset($_POST['knews_automated_post'])) {
+			$value=$Knews_plugin->post_safe('knews_automated_post', $knewsOptions['def_autom_post'], 0, 'int');
+			update_post_meta($postID, '_knews_automated', $value);
+		}
 	}
 	add_action('admin_menu', 'knews_options_box');
 	add_action('save_post', 'knews_options_save');
@@ -1952,7 +1987,19 @@ if (!function_exists("Knews_plugin_ap")) {
 			$content = '<h3>' . __('Welcome to Knews Pro','knews') . '</h3><p>' . sprintf(__('You can configure the new features <br />into %s Knews Pro Options tab','knews'), '<a href="admin.php?page=knews_config&tab=pro">') . '</a></p>';
 			knews_add_pointer_scripts_js($content, '#toplevel_page_knews_news', 'knews_pro_welcome');
 
-		} else if ($knewsOptions['smtp_knews']==1 && !in_array( 'real_spam_test', $dismissed ) ) {
+		} else if ( !in_array( 'french_bug_knews', $dismissed ) && substr(get_bloginfo('language'), 0, 2) == 'fr') {
+			$content = '<h3>' . __('French release: Important bug solved.','knews') . '</h3><p>' . sprintf(__('Previous French releases can\'t test SMTP config or use our Real Anti-Spam test. Please, %s check it now.','knews') . "</a>", '<a href="' . get_admin_url() . 'admin.php?page=knews_config&tab=advanced&subtab=2">') . '</p>';
+			knews_add_pointer_scripts_js($content, '#toplevel_page_knews_news', 'french_bug_knews');
+
+		} else if (strpos($_SERVER['REQUEST_URI'],'knews_config') === false && !in_array( 'config_knews', $dismissed ) ) {
+			$content = '<h3>' . __('Welcome to Knews.','knews') . '</h3><p>' . sprintf(__('Please, go to %s configuration page','knews') . "</a>", '<a href="' . get_admin_url() . 'admin.php?page=knews_config">') . '</p>';
+			knews_add_pointer_scripts_js($content, '#toplevel_page_knews_news', 'config_knews');
+	
+		} else if (strpos($_SERVER['REQUEST_URI'],'knews_news&section=edit') !== false && !in_array( 'knews_videotutorial', $dismissed ) ) {
+			$content = '<h3>Videotutorial</h3><p>' . sprintf(__('There is a videotutorial about Knews WYSIWYG Editor, %s view it in Youtube','knews'), '<a href="http://www.youtube.com/watch?v=axDO5ZIW-9s" target="_blank">') . '</a></p>';
+			knews_add_pointer_scripts_js($content, '#toplevel_page_knews_news', 'knews_videotutorial');
+
+		} else if (strpos($_SERVER['REQUEST_URI'],'knews_news&section=send') !== false && !in_array( 'real_spam_test', $dismissed ) ) {
 			$content = '<h3>New diagnose tool: Real Spam Test</h3><p>We\\\'re just added a powerful and easy to use new tool: simple one button click and get real <strong>Spam Assassin</strong> live result about your SMTP configuration <a href="admin.php?page=knews_config&tab=advanced&subtab=2">here</a>.</p>';
 			knews_add_pointer_scripts_js($content, '#toplevel_page_knews_news', 'real_spam_test');
 
@@ -1970,16 +2017,16 @@ if (!function_exists("Knews_plugin_ap")) {
 		}
 
 	}
-	function knews_add_pointer_scripts_js($content, $handler, $pointer) {
+	function knews_add_pointer_scripts_js($content, $handler, $pointer, $edge = 'left', $align = 'center' ) {
 	?>
 		<script type="text/javascript">
 		//<![CDATA[
 		jQuery(document).ready( function($) {
 			$('<?php echo $handler; ?>').pointer({
-				content: '<?php echo $content; ?>',
+				content: '<?php echo str_replace("\\'", "\'", str_replace("'","\'",$content)); ?>',
 				position: {
-					edge: 'left',
-					align: 'center'
+					edge: '<?php echo $edge; ?>',
+					align: '<?php echo $align; ?>'
 				},
 				close:  function() {
 					$.post( ajaxurl, {

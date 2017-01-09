@@ -72,6 +72,7 @@ div#botonera a {
 	background:#eee url(../images/iconos.png) no-repeat 0 0;
 	font-size:1px;
 	overflow:hidden;
+	transition:none;
 }
 .rtl div#botonera a {
 	float:right;
@@ -102,6 +103,8 @@ div#botonera a.undo, div#botonera div.desactivada a.undo:hover { background-posi
 
 div#botonera a.htmledit, div#botonera div.desactivada a.htmledit:hover { background-position:-600px 0; }	div#botonera a.htmledit:hover { background-position:-600px -25px; }
 div#botonera a.automated, div#botonera div.desactivada a.automated:hover { background-position:-625px 0; }	div#botonera a.automated:hover, div#botonera a.automated_on { background-position:-625px -25px; }
+
+div#botonera a.clean, div#botonera div.desactivada a.clean:hover { background-position:-650px 0; }	div#botonera a.clean:hover { background-position:-650px -25px; }
 
 div.automated_menu {
 	display:none;
@@ -215,9 +218,10 @@ div.wysiwyg_toolbar div.insertable div.html_content {
 	display:none;
 }
 div.plegable {
-	overflow:auto;
 	width:240px;
 	height:300px;
+	overflow:visible;
+	overflow-x:hidden;
 }
 div.resize {
 	padding:4px 0 2px 85px;
@@ -240,6 +244,7 @@ div.wysiwyg_toolbar div.tools a {
 	height:24px;
 	float:left;
 	margin-right:1px;
+	transition:none;
 }
 .rtl div.wysiwyg_toolbar div.tools a {
 	float:right;
@@ -347,4 +352,40 @@ div.knews_vars_dialog input.txt {
 #newstype {
 	float:right;
 	font-size:13px;
+}
+
+/* new color picker dialog */
+div.rightcol {
+	float:right;
+	width:150px;
+}
+div.default_colours a {
+	display:block;
+	float:left;
+	width:20px;
+	height:20px;
+	border:#666 1px solid;
+	border-radius:2px;
+	margin:1px;
+}
+div.default_colours span.divider {
+	padding-top:17px;
+	display:block;
+	clear:both;
+	border-bottom:1px #aaa solid;
+	padding-top:10px;
+	height:1px;
+	margin-bottom:10px;
+}
+
+/* 4.4 tabs */
+
+body #poststuff h2.knews-editor-tab-wrapper {
+	font-size:1.5em;
+	margin-top:20px;
+	margin-bottom:5px;
+}
+span.knews_title {
+	float:left;
+	margin-right:20px;
 }

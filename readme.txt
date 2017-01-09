@@ -3,8 +3,8 @@ Contributors: creverter
 Donate link: http://www.knewsplugin.com/multi-language/
 Tags: newsletter, newsletters, automated newsletter, newsletter multilingual, wysiwyg newsletter editor, batch sending, newsletter signup, email subscribe, email capture, subscription, subscribers
 Requires at least: 3.1
-Tested up to: 4.2.2
-Stable tag: 1.7.6
+Tested up to: 4.6.1
+Stable tag: 1.8.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -195,6 +195,47 @@ In any case, the degree of personalisation of our templates is immense, with tho
 10. The Officina Template.
 
 == Changelog ==
+
+= 1.8.2 =
+- Now the submit time (hour and minute) can be set for automated newsletters
+- Autocreation / autoresponders tasks settings can be edited (no delete and create another one anymore)
+- Solved bug on for French release: bad escaped apostrophe break JavaScript on admin side
+- Solved bug on spam live test (now works for https admin sites)
+- Clean wp-cron knews task when another options has selected (webserver cronjob or js-cron)
+
+= 1.8.1 =
+- Solved bug on some images resizing
+- Solved bug in stats for multisites
+- .htaccess code improvements for tracking pixel:
+- _ Code persists after permalinks change
+- _ Code compatible with multisite config
+- Solved pagination bug in manual post selector
+
+= 1.8.0 =
+WYSIWYG EDITOR NEW FEATURES: 
+- New clean styles button added (on upper toolbar)
+- Clean text paste from Word and others: avoid unstable formats after paste
+- Selected nodes-only HTML code editor (on bottom bar)
+- Solved issues on Internet Explorer: token insertions (gear icon for username etc) and text color 
+
+- solved issue on automation: some posts was not included on automation
+- deferred publication posts (future date) loosing the "knews for automation" choice at publication time: solved.
+- fixed issue on tracking stats for https protocol websites on front-end 
+- dates on admin side are now shown localised, not GMT
+- Ready for the new-wave-templates (comming soon)
+
+= 1.7.9 =
+- Solved bug on new stats: not displaying on 1.7.8 (sorry, guys)...
+
+= 1.7.8 =
+- Better stats: Now uses the google graphs library
+- Solved issue in excerpt length (sometimes ignored)
+
+= 1.7.7 =
+- Integrated WordPress Farbastic color picker on WYSIWYG editor
+- Better scroll control on WYSIWYG editor
+- Less intrusive advices
+- Faster editor loading
 
 = 1.7.6 =
 - Real Spam Test: check easily your SMTP configuration with real Spam Assassin diagnose results
@@ -698,42 +739,30 @@ Solved a Cross-Site Scripting Vulnerability (XSS) in the file: knews/wysiwyg/fon
 
 == Upgrade Notice ==
 
-= 1.7.6 =
-- Real Spam Test: check easily your SMTP configuration with real Spam Assassin diagnose results
-- Text version added on every newsletter sent. It will get better (automatic extraction from HTML content)
-- Solved warning about WPLANG on admin dashboard
-- Better pixel tracking code script
-- Solved some auto-creation newsletter issues
+= 1.8.2 =
+- Now the submit time (hour and minute) can be set for automated newsletters
+- Autocreation / autoresponders tasks settings can be edited (no delete and create another one anymore)
+- Solved bug on for French release: bad escaped apostrophe break JavaScript on admin side
+- Solved bug on spam live test (now works for https admin sites)
+- Clean wp-cron knews task when another options has selected (webserver cronjob or js-cron)
 
-= 1.7.5 =
-- Solved the missing  /wp-content/plugins/knews/includes/knews_subscribe.js?ver=1.7.4 bug. Bug introduced in 1.7.4. (Sorry guys!)
+= 1.8.1 =
+- Solved bug on some images resizing
+- Solved bug in stats for multisites
+- .htaccess code improvements for tracking pixel:
+- _ Code persists after permalinks change
+- _ Code compatible with multisite config
+- Solved pagination bug in manual post selector
 
-= 1.7.4 =
-- Gravity Forms support added through [Knews + GF Glue](http://www.wordpress.org/plugins/knews-gravity-forms-glue) free plugin: add easily a subscription checkbox to your GF forms
-- Complaints [Google PII Adsense Policy] (https://support.google.com/adsense/answer/6156630?hl=en) (Personally Identifiable Information)
-- Support new qTranslate X 3.3 release(a qTranslate branch)
-- JavaScript front-end code enqueued in a WP standard way: subscription forms and subscription/unsubscription dialogs compatibles with jQuery loaded on footer.
+= 1.8.0 =
+WYSIWYG EDITOR NEW FEATURES: 
+- New clean styles button added (on upper toolbar)
+- Clean text paste from Word and others: avoid unstable formats after paste
+- Selected nodes-only HTML code editor (on bottom bar)
+- Solved issues on Internet Explorer: token insertions (gear icon for username etc) and text color 
 
-= 1.7.3 =
-- Support added for [qTranslateX](https://wordpress.org/plugins/qtranslate-x/) (a qTranslate branch)
-
-= 1.7.2 =
-- Contact Form 7 support added through [Knews + CF7 Glue](http://www.wordpress.org/plugins/knews-contact-form-7-glue) free plugin: add easily a subscription checkbox to your CF7 forms
-- Multiple mailing list subscription at once option added (chekboxes instead select on subscription widget as option)
-- Consistent local time info instead of GMT time on admin side
-
-= 1.7.1 =
-- Crop image (on/off) on resize added as option
-- Support for polylang different domain per language
-- Localised time format on Knews admin pages
-- Added https support for CRONJOB url
-- Support for background styles on body tag on newsletter templates
-- Saffety bug solved on SQL injection attack
-- Bug solved into automated newsletter creation: a second newsletter somethimes was created with fewer posts
-- Some old installs can't create autometed newsletters. Now solved.
-- Solved bug on email testing: newsletters can't be sent manually to emails with hypens on domain
-- Bug solved in URL on newsletter can't read link
-
-= 1.7.0 =
-* Partial support for the new e-commenrce templates (for WooCommerce)
-* Add support for body inline styles on templates
+- solved issue on automation: some posts was not included on automation
+- deferred publication posts (future date) loosing the "knews for automation" choice at publication time: solved.
+- fixed issue on tracking stats for https protocol websites on front-end 
+- dates on admin side are now shown localised, not GMT
+- Ready for the new-wave-templates (comming soon)

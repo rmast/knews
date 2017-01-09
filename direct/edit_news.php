@@ -30,6 +30,7 @@ if ($Knews_plugin) {
 			<?php echo $results_news[0]->html_mailing; ?>
 		</div>
 		<div id='modalDiv' style='display:none'></div>
+		<input id="paste" />
 	</body>
 	</html>
 <?php

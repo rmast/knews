@@ -71,7 +71,7 @@ if ($Knews_plugin->get_safe('da')=='delete') {
 		save_id = n;
 		save_text = jQuery('td.priority_' + n).html();
 		save_value = parseInt(jQuery('td.priority_' + n).html(), 10);
-		jQuery('td.priority_' + n).html('<select name="priority"><option value="1">1 <?php _e('(lowest)','knews');?></option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected="selected">5 <?php _e('(normal)','knews');?></option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 <?php _e('(highest)','knews');?></option></select><br><input type="button" value="Update" class="priority_do"><input type="button" value="Cancel" class="priority_cancel">');
+		jQuery('td.priority_' + n).html('<select name="priority"><option value="1">1 <?php echo $Knews_plugin->escape_js(__('(lowest)','knews'), "'");?></option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected="selected">5 <?php echo $Knews_plugin->escape_js(__('(normal)','knews'), "'");?></option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 <?php echo $Knews_plugin->escape_js(__('(highest)','knews'), "'");?></option></select><br><input type="button" value="Update" class="priority_do"><input type="button" value="Cancel" class="priority_cancel">');
 		
 		jQuery('td.priority_' + n + ' select').val(save_value);
 		jQuery('td.priority_' + n + ' select')[0].focus();

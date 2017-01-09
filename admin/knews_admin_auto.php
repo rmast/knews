@@ -30,7 +30,7 @@ if (!empty($_POST)) $w=check_admin_referer($knews_nonce_action, $knews_nonce_nam
 		echo '<div class="updated"><p>' . (($Knews_plugin->get_safe('auto')==1) ? __('Automated submit activated','knews') : __('Manual submit activated','knews')) . '</p></div>';
 	}
 
-	if ($Knews_plugin->post_safe('action')=='add_autoresponder' || $Knews_plugin->post_safe('action')=='add_auto') {
+	if ($Knews_plugin->post_safe('action')=='add_autoresponder' || $Knews_plugin->post_safe('action')=='add_auto' || $Knews_plugin->post_safe('action')=='edit_auto' || $Knews_plugin->post_safe('action')=='edit_autoresponder') {
 
 		$name = $Knews_plugin->post_safe('auto_name');
 		$lang = $Knews_plugin->post_safe('auto_lang');
@@ -49,7 +49,7 @@ if (!empty($_POST)) $w=check_admin_referer($knews_nonce_action, $knews_nonce_nam
 		$delay = $Knews_plugin->post_safe('auto_delay', 0, 'int');
 		$delay_unit = $Knews_plugin->post_safe('auto_delay_unit');	
 
-		$type = 'autocreate'; if ($Knews_plugin->post_safe('action')=='add_autoresponder') $type = 'autoresponder';
+		$type = 'autocreate'; if ($Knews_plugin->post_safe('action')=='add_autoresponder' || $Knews_plugin->post_safe('action')=='edit_autoresponder') $type = 'autoresponder';
 		
 		$knews_cpt='';
 		$knews_categories='';
@@ -59,6 +59,7 @@ if (!empty($_POST)) $w=check_admin_referer($knews_nonce_action, $knews_nonce_nam
 		$knews_ignore_post_opt = 0;
 		$use_post_embed_pref = 1;
 
+		$submit_time = $Knews_plugin->post_safe('auto_submit_time', '00:00');	
 
 		if ($name =='' || $news=='' || $target=='') {
 			
@@ -72,16 +73,30 @@ if (!empty($_POST)) $w=check_admin_referer($knews_nonce_action, $knews_nonce_nam
 
 		} else {
 			$query = "SELECT * FROM " . KNEWS_AUTOMATED . " WHERE name='" . $name . "'";
+			if ($Knews_plugin->post_safe('action')=='edit_auto' || $Knews_plugin->post_safe('action')=='edit_autoresponder') $query .= ' AND id <> ' . $Knews_plugin->post_safe('edit_auto_id', 0, 'int');
+
 			$results = $wpdb->get_results( $query );
 			
 			if (count($results)==0) {
-				$sql = "INSERT INTO " . KNEWS_AUTOMATED . " (name, selection_method, target_id, newsletter_id, lang, paused, auto, every_mode, every_time, what_dayweek, every_posts, last_run, emails_at_once, run_yet, id_smtp, what_is, event, delay, delay_unit, include_cats, exclude_cats, include_tags, exclude_tags, include_postypes, use_post_embed_pref) VALUES (";
-				$sql .= "'" . $name . "', 1, " . $target . ", " . $news . ", '" . $lang . "', " . $paused . ", " . $auto . ", " . $mode . ", " . $time . ", " . $day . ", " . $posts . ", '" . $Knews_plugin->get_mysql_date() . "', " . $at_once . ", 0, " . $id_smtp . ", '" . $type . "', '" . $event . "', " . $delay . ", '" . $delay_unit . "', '" . $knews_categories . "', '" . $knews_exclude_categories . "', '" . $knews_tags . "', '" . $knews_exclude_tags . "', '" . $knews_cpt . "', " . $use_post_embed_pref . ")";
-				
-				if ($wpdb->query($sql)) {
-					echo '<div class="updated"><p>' . __('Automated submit created','knews') . '</p></div>';
+				if ($Knews_plugin->post_safe('action')=='edit_auto' || $Knews_plugin->post_safe('action')=='edit_autoresponder') { 
+ 
+					$sql = "UPDATE " . KNEWS_AUTOMATED . " SET name = '" . $name . "', selection_method = 1, target_id = " . $target . ", newsletter_id = " . $news . ", lang = '" . $lang . "', paused = " . $paused . ", auto = " . $auto . ", every_mode = " . $mode . ", every_time = " . $time . ", what_dayweek =  " . $day . ", every_posts = " . $posts . ", emails_at_once = " . $at_once . ", id_smtp = " . $id_smtp . ", what_is = '" . $type . "', event = '" . $event . "', delay = " . $delay . ", delay_unit = '" . $delay_unit . "', include_cats = '" . $knews_categories . "', exclude_cats = '" . $knews_exclude_categories . "', include_tags = '" . $knews_tags . "', exclude_tags = '" . $knews_exclude_tags . "', include_postypes = '" . $knews_cpt . "', use_post_embed_pref = " . $use_post_embed_pref . ", submit_time = '" . $submit_time . "' WHERE id = " . $Knews_plugin->post_safe('edit_auto_id', 0, 'int');
+
+					if ($wpdb->query($sql)) {
+						echo '<div class="updated"><p>' . __('Automated submit modified successfully','knews') . '</p></div>';
+					} else {
+						echo '<div class="error"><p><strong>' . __('Error','knews') . ':</strong> ' . __("Cant modify the automated submit",'knews') . ' : ' . $wpdb->last_error . '</p></div>';
+					}
+	
 				} else {
-					echo '<div class="error"><p><strong>' . __('Error','knews') . ':</strong> ' . __("Cant create the automated submit",'knews') . ' : ' . $wpdb->last_error . '</p></div>';
+					$sql = "INSERT INTO " . KNEWS_AUTOMATED . " (name, selection_method, target_id, newsletter_id, lang, paused, auto, every_mode, every_time, what_dayweek, every_posts, last_run, emails_at_once, run_yet, id_smtp, what_is, event, delay, delay_unit, include_cats, exclude_cats, include_tags, exclude_tags, include_postypes, use_post_embed_pref, submit_time) VALUES (";
+					$sql .= "'" . $name . "', 1, " . $target . ", " . $news . ", '" . $lang . "', " . $paused . ", " . $auto . ", " . $mode . ", " . $time . ", " . $day . ", " . $posts . ", '" . $Knews_plugin->get_mysql_date() . "', " . $at_once . ", 0, " . $id_smtp . ", '" . $type . "', '" . $event . "', " . $delay . ", '" . $delay_unit . "', '" . $knews_categories . "', '" . $knews_exclude_categories . "', '" . $knews_tags . "', '" . $knews_exclude_tags . "', '" . $knews_cpt . "', " . $use_post_embed_pref . ", '" . $submit_time . "')";
+					
+					if ($wpdb->query($sql)) {
+						echo '<div class="updated"><p>' . __('Automated submit created','knews') . '</p></div>';
+					} else {
+						echo '<div class="error"><p><strong>' . __('Error','knews') . ':</strong> ' . __("Cant create the automated submit",'knews') . ' : ' . $wpdb->last_error . '</p></div>';
+					}
 				}
 			} else {
 				echo '<div class="error"><p><strong>';
@@ -129,6 +144,17 @@ if (!empty($_POST)) $w=check_admin_referer($knews_nonce_action, $knews_nonce_nam
 		knews_cats_tags['tags']=new Array();
 <?php
 	$cats=array(); $tags=array();
+function knews_select($name_id, $values, $edit_task, $key) {
+	echo '<select name="' . $name_id . '" id="' . $name_id . '" autocomplete="off">';
+	$n=0;
+	foreach ($values as $val => $text) {
+		$n++;
+		$selected=false; if ($n==1 && !isset($edit_task->$key)) $selected=true;
+		if (isset($edit_task->$key) && $edit_task->$key == $val) $selected=true;
+		echo '<option value="' . $val . '" ' . ($selected ? 'selected="selected"' : '') . '>' . $text . '</option>';
+	}
+	echo '</select>';
+}
 ?>
 	</script>
 	<div class=wrap>
@@ -145,7 +171,7 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 			$filtered_automated = $wpdb->get_results( 'SELECT COUNT(id) AS n ' . $query );
 			$filtered_automated = $filtered_automated[0]->n;
 
-			$query .= " LIMIT " . $results_per_page . " OFFSET " . $results_per_page * ($paged - 1);
+			$query .= " ORDER BY paused LIMIT " . $results_per_page . " OFFSET " . $results_per_page * ($paged - 1);
 
 			$results = $wpdb->get_results( 'SELECT * ' . $query );
 
@@ -155,7 +181,6 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 				<table class="widefat">
 					<thead>
 						<tr>
-							<?php /*<th class="manage-column column-cb check-column"><input type="checkbox" /></th>*/ ?>
 							<th align="left"><?php _e('Automated process name','knews');?></th>
 							<th><?php _e('Target','knews');?></th>
 							<th><?php _e('Newsletter','knews');?></th>
@@ -173,61 +198,63 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 					$results_counter=0;
 					foreach ($results as $automated) {
 						$results_counter++;
-						//if ($results_per_page * ($paged-1)<$results_counter) {
-							echo '<tr' . (($alt) ? ' class="alt"' : '') . '>'; //<th class="check-column"><input type="checkbox" name="batch_' . $list->id . '" value="1"></th>';
+						
+							echo '<tr' . (($alt) ? ' class="alt"' : '') . '>';
 							echo '<td class="name_' . $automated->id  . '"><strong>' . $automated->name . '</strong>';
 							
-							echo '<div class="row-actions"><span><a title="' . __('Activate/deactivate the automated task', 'knews') . '" href="admin.php?page=knews_auto&activated=' . (($automated->paused==1) ? '0' : '1') . '&idauto=' . $automated->id . '">' . (($automated->paused==1) ? __('Activate', 'knews') : __('Deactivate', 'knews')) . '</a> | </span>';
+						echo '<div class="row-actions"><span><a title="' . __('Edit the automated task details', 'knews') . '" href="admin.php?page=knews_auto&edit=1&idauto=' . $automated->id . '#editauto">' . __('Edit task', 'knews') . '</a> | </span>';
 
-							echo '<span><a title="' . __('Automatic/Manual submits of auto-created newsletters', 'knews') . '" href="admin.php?page=knews_auto&auto=' . (($automated->auto==1) ? '0' : '1') . '&idauto=' . $automated->id . '">' . (($automated->auto==1) ? __('Manual submit', 'knews') : __('Submit automatic', 'knews')) . '</a> | </span>';
+						echo '<span><a title="' . __('Activate/deactivate the automated task', 'knews') . '" href="admin.php?page=knews_auto&activated=' . (($automated->paused==1) ? '0' : '1') . '&idauto=' . $automated->id . '">' . (($automated->paused==1) ? __('Activate', 'knews') : __('Deactivate', 'knews')) . '</a> | </span>';
 
-							echo '<span class="trash"><a href="admin.php?page=knews_auto&da=delete&idauto=' . $automated->id . '" title="' . __('Delete definitively this automated task', 'knews') . '" class="submitdelete">' . __('Delete', 'knews') . '</a></span></div>';
+						echo '<span><a title="' . __('Automatic/Manual submits of auto-created newsletters', 'knews') . '" href="admin.php?page=knews_auto&auto=' . (($automated->auto==1) ? '0' : '1') . '&idauto=' . $automated->id . '">' . (($automated->auto==1) ? __('Manual submit', 'knews') : __('Submit automatic', 'knews')) . '</a> | </span>';
 
-							echo '</td><td>';
-							foreach ($lists_name as $ln) {
-								if ($ln->id==$automated->target_id) {
-									echo $ln->name;
-									break;
-								}
+						echo '<span class="trash"><a href="admin.php?page=knews_auto&da=delete&idauto=' . $automated->id . '" title="' . __('Delete definitively this automated task', 'knews') . '" class="submitdelete">' . __('Delete', 'knews') . '</a></span></div>';
+
+						echo '</td><td>';
+						foreach ($lists_name as $ln) {
+							if ($ln->id==$automated->target_id) {
+								echo $ln->name;
+								break;
 							}
-							echo '</td>';
-							echo '<td>';
-							foreach ($news as $n) {
-								if ($n->id==$automated->newsletter_id) {
-									echo $n->name;
-									break;
-								}
+						}
+						echo '</td>';
+						echo '<td>';
+						foreach ($news as $n) {
+							if ($n->id==$automated->newsletter_id) {
+								echo $n->name;
+								break;
 							}
-							echo '</td>';
-							echo '<td>' . $automated->lang . '</td>';
-							echo '<td>' . (($automated->paused==1) ? __('Off', 'knews') : __('On', 'knews')) . '</td>';
-							if ($automated->paused!=1) $pending=true;
-							echo '<td>' . (($automated->auto==1) ? __('Automated submit', 'knews') : __('Manual submit', 'knews')) . '</td>';
-							echo '<td>';
-							if ($automated->every_mode ==1) {
-								printf( 'every %s posts', $automated->every_posts);
-							} else {
-								echo $frequency[$automated->every_time - 1];
-								if ($automated->every_time > 1) echo ' on ' . $dayname[$automated->what_dayweek-1];
-							}
-							echo '</td>';
-							echo '<td>' . (($automated->run_yet==0) ? __('NEVER','knews') : $automated->last_run) . '</td>';
-							echo '<td><a href="#" class="knews_details knews_alert_click" title="';
-							if ($automated->include_postypes != '') echo 'Only this post types: ' . $automated->include_postypes . "\r\n";
-							if ($automated->include_cats != '') echo 'Only from this categories: ' . knews_list_items($automated->include_cats, $all_cats) . "\r\n";
-							if ($automated->exclude_cats != '') echo 'Exclude this categories: ' . knews_list_items($automated->exclude_cats, $all_cats) . "\r\n";
-							if ($automated->include_cats == '' && $automated->exclude_cats == '') echo 'All categories will be included' . "\r\n";
-							if ($automated->include_tags != '') echo 'Only from this tags: ' . knews_list_items($automated->include_tags, $all_tags) . "\r\n";
-							if ($automated->exclude_tags != '') echo 'Exclude this tags: ' . knews_list_items($automated->exclude_tags, $all_tags) . "\r\n";
-							if ($automated->include_tags == '' && $automated->exclude_tags == '') echo 'All tags will be included' . "\r\n";
-							echo 'Ignore the Knews Automation post setting: ' . (($automated->use_post_embed_pref == 0) ? 'Yes' : 'No') . "\r\n";
-							echo $automated->emails_at_once * 6 . ' emails per hour sent' . "\r\n";
-							echo 'Submit method: ' . (($automated->auto==1) ? 'Automated' : 'Manual') . "\r\n";
-							if (isset($all_smtp[$automated->id_smtp])) echo 'It will be sent from: ' . $all_smtp[$automated->id_smtp]['from_mail_knews'];
-							echo '">+</a></td></tr>';
-						//}
+						}
+						echo '</td>';
+						echo '<td>' . $automated->lang . '</td>';
+						echo '<td>' . (($automated->paused==1) ? '<span style="color:#f00">' . __('Off', 'knews') . '</span>' : __('On', 'knews')) . '</td>';
+						if ($automated->paused!=1) $pending=true;
+						echo '<td>' . (($automated->auto==1) ? __('Automated submit', 'knews') : __('Manual submit', 'knews')) . '</td>';
+						echo '<td>';
+						if ($automated->every_mode ==1) {
+							printf( 'every %s posts', $automated->every_posts);
+						} else {
+							echo $frequency[$automated->every_time - 1];
+							if ($automated->every_time > 1) echo ' on ' . $dayname[$automated->what_dayweek-1];
+						}
+						echo '</td>';
+						echo '<td>' . (($automated->run_yet==0) ? __('NEVER','knews') : $automated->last_run) . '</td>';
+						echo '<td><a href="#" class="knews_details knews_alert_click" title="';
+						if ($automated->include_postypes != '') echo 'Only this post types: ' . $automated->include_postypes . "\r\n";
+						if ($automated->include_cats != '') echo 'Only from this categories: ' . knews_list_items($automated->include_cats, $all_cats) . "\r\n";
+						if ($automated->exclude_cats != '') echo 'Exclude this categories: ' . knews_list_items($automated->exclude_cats, $all_cats) . "\r\n";
+						if ($automated->include_cats == '' && $automated->exclude_cats == '') echo 'All categories will be included' . "\r\n";
+						if ($automated->include_tags != '') echo 'Only from this tags: ' . knews_list_items($automated->include_tags, $all_tags) . "\r\n";
+						if ($automated->exclude_tags != '') echo 'Exclude this tags: ' . knews_list_items($automated->exclude_tags, $all_tags) . "\r\n";
+						if ($automated->include_tags == '' && $automated->exclude_tags == '') echo 'All tags will be included' . "\r\n";
+						echo 'Ignore the Knews Automation post setting: ' . (($automated->use_post_embed_pref == 0) ? 'Yes' : 'No') . "\r\n";
+						echo $automated->emails_at_once * 6 . ' emails per hour sent' . "\r\n";
+						echo 'Submit method: ' . (($automated->auto==1) ? 'Automated' : 'Manual') . "\r\n";
+						echo 'The submission will start at: ' . $automated->submit_time . "\r\n";
+						if (isset($all_smtp[$automated->id_smtp])) echo 'It will be sent from: ' . $all_smtp[$automated->id_smtp]['from_mail_knews'];
+						echo '">+</a></td></tr>';
+						
 						$alt=!$alt;
-						//if ($results_counter == $results_per_page * $paged) break;
 					}
 					?>
 					</tbody>
@@ -271,24 +298,60 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 			}
 			?><p>&nbsp;</p>
 			<hr />
-			<a id="newauto"></a>
-			<h2><?php _e('New Auto-creation Process','knews');?> <a href="<?php _e('http://www.knewsplugin.com/automated-newsletter-creation/','knews'); ?>" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Auto-create Newsletters Tutorial','knews'); ?></a></h2>
+			<?php
+			$edit_task = new stdClass();
+			if ($Knews_plugin->get_safe('edit')=='1' && $Knews_plugin->get_safe('idauto') != '') {
+				foreach ($results as $result) {
+					if ($result->id == $Knews_plugin->get_safe('idauto')) {
+						$edit_task = $result;
+						break;
+					}
+				}
+				if (isset($edit_task)) {
+				?>
+					<a id="editauto"></a>
+					<h2><?php _e('Editing Auto-creation Process:','knews'); echo ' ' . $edit_task->name; ?></h2>
+				<?php
+				} else {
+				?>
+					<a id="editauto"></a>
+					<h2><?php _e('New Auto-creation Process','knews');?> <a href="<?php _e('http://www.knewsplugin.com/automated-newsletter-creation/','knews'); ?>" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Auto-create Newsletters Tutorial','knews'); ?></a></h2>
+					<div class="notice"><?php _e('Selected task not found.','knews'); ?></div>
+				<?php
+				}
+			} else {
+			?>
+				<a id="newauto"></a>
+				<h2><?php _e('New Auto-creation Process','knews');?> <a href="<?php _e('http://www.knewsplugin.com/automated-newsletter-creation/','knews'); ?>" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Auto-create Newsletters Tutorial','knews'); ?></a></h2>
+			<?php
+			}
+			?>
 			<form method="post" action="admin.php?page=knews_auto" id="create_auto">
+				<?php 
+				if (isset($edit_task->id)) {
+				?>
+				<input type="hidden" name="action" id="action" value="edit_auto" />
+				<input type="hidden" name="edit_auto_id" id="action" value="<?php echo $edit_task->id; ?>" />
+				<?php } else { ?>
 				<input type="hidden" name="action" id="action" value="add_auto" />
+				<?php } ?>
 				<h3><?php _e('General options','knews'); ?></h3>
-				<p><label for="auto_name"><?php _e('Automated process name:','knews');?> </label><input type="text" name="auto_name" id="auto_name" class="regular-text" /></p> 
-				<p><label for="auto_paused"><?php _e('Active process:','knews');?></label> <select name="auto_paused" id="auto_paused"><option value="0" selected="selected"><?php _e('On','knews');?></option><option value="1"><?php _e('Off','knews');?></option></select></p>
+				<p><label for="auto_name"><?php _e('Automated process name:','knews');?> </label><input type="text" name="auto_name" id="auto_name" class="regular-text" value="<?php if (isset($edit_task->name)) echo $edit_task->name; ?>" /></p> 
+				<p><label for="auto_paused"><?php _e('Active process:','knews');?></label> <?php knews_select('auto_paused', array('0' => __('On','knews'), '1' => __('Off','knews')), $edit_task, 'paused'); ?></p>
 				<h3><?php _e('Newsletter creation options','knews');?></h3>
 				<?php
 				$lang_listed = false;
 				
 				if (count($languages) > 1) {
 					
-					echo '<p><label for="auto_lang">' . __('Get posts from language:','knews') . '</label> <select name="auto_lang" id="auto_lang" autocomplete="off">';
+					echo '<p><label for="auto_lang">' . __('Get posts from language:','knews') . '</label> ';
+					$langs=array();
 					foreach($languages as $l){
-						echo '<option value="' . $l['language_code'] . '"' . (($l['active']==1) ? ' selected="selected" ' : '') . '>' . $l['translated_name'] . '</option>';
+						if (!isset($edit_task->id) && $l['active']) $edit_task->lang = $l['language_code'];
+						$langs[$l['language_code']] = $l['translated_name'];
 					}
-					echo '</select></p>';
+					knews_select('auto_lang', $langs, $edit_task, 'lang'); 
+					echo '</p>';
 		
 				} else if (count($languages) == 1) {
 					foreach ($languages as $l) {
@@ -307,38 +370,44 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 					}
 				}
 				if (count($disponible_news) != 0) {
-					echo '<select name="auto_newsletter" id="auto_newsletter">';
+					$disp_news=array();
 					foreach ($disponible_news as $n) {
-						echo '<option value="' . $n->id . '"' . (($Knews_plugin->get_safe('id')==$n->id) ? ' selected="selected"' : '') . '>' . $n->name . ' (' . $n->lang . ')</option>';
+						$disp_news[$n->id] = $n->name . ' (' . $n->lang . ')';
 					}
-					echo '</select></p>';
+					if (!isset($edit_task->id) && $Knews_plugin->get_safe('id') != '') $edit_task->newsletter_id = $Knews_plugin->get_safe('id');
+					knews_select('auto_newsletter', $disp_news, $edit_task, 'newsletter_id');
+					echo '</p>';
 				} else {
 					echo '<span style="color:#f00">';
 					echo __('You must first create a newsletter with insertable info (leave the %the_content%, %the_title% etc.)','knews') . '</p>';
 					echo '</span>';
 				}
+				
+				$f_auto_mode = 1; if (isset($edit_task->every_mode)) $f_auto_mode = $edit_task->every_mode;
 				?>
-				<p><input type="radio" name="auto_mode" autocomplete="off" value="1" checked="checked" /><?php printf(__('Create a newsletter every %s posts','knews'), '<input type="text" name="auto_posts" id="auto_posts" value="5" style="text-align:right; width:30px;" />');?></p>
-				<p><input type="radio" name="auto_mode" autocomplete="off" value="2" /> <?php _e('Create a newsletter every x amount of time','knews');?> 
+				<p><input type="radio" name="auto_mode" autocomplete="off" value="1" <?php if ($f_auto_mode=='1') echo 'checked="checked"'; ?> /><?php printf(__('Create a newsletter every %s posts','knews'), '<input type="text" name="auto_posts" id="auto_posts" value="' . (isset($edit_task->every_posts) ? $edit_task->every_posts : '5') . '" style="text-align:right; width:30px;" />');?></p>
+				<p><input type="radio" name="auto_mode" autocomplete="off" value="2" <?php if ($f_auto_mode=='2') echo 'checked="checked"'; ?> /> <?php _e('Create a newsletter every x amount of time','knews');?> 
 				<?php /*<span id="auto_mode_1">Every <input type="text" name="auto_posts" id="auto_posts" value="5" style="width:30px;" /> posts</span>*/?>
-				<span id="auto_mode_2" style="display:none;"><label for="auto_time"><?php _e('Submit','knews'); ?></label> <select name="auto_time" id="auto_time" autocomplete="off">
+				<span id="auto_mode_2" style="display:none;"><label for="auto_time"><?php _e('Submit','knews'); ?></label> 
 				<?php
-				$f=0;
+				$f=0; $freq = array();
 				foreach ($frequency as $fre) {
 					$f++;
-					echo '<option value="' . $f . '">' . $fre . '</option>';
+					$freq[$f] = $fre;
 				}
+				knews_select('auto_time', $freq, $edit_task, 'every_time');
 				?>
-				</select><span id="dayweek">, <label for="auto_dayweek">on</label> <select name="auto_dayweek" id="auto_dayweek">
+				<span id="dayweek">, <label for="auto_dayweek">on</label> 
 				<?php
-				$d=0;
+				$d=0; $days = array();
 				foreach ($dayname as $day_name) {
 					$d++;
-					echo '<option value="' . $d . '">' . $day_name . '</option>';
+					$days[$d] = $day_name;
 				}
+				knews_select('auto_dayweek', $days, $edit_task, 'what_dayweek');
 				?>
-				</select></span></p>
-				<h3><?php _e('Post selection advanced criteria (Knews Pro Features)','knews'); ?></h3>
+				</span></p>
+				<h3><?php _e('Post selection advanced criteria','knews'); ?></h3>
 				<?php 
 				$howmany=0;
 				$post_types = array('name' => 'post', 'label' => 'post');
@@ -347,31 +416,50 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 					$howmany++;
 
 					if ($howmany == 1) {
+						$cpt_checked = false;
+						if (isset($edit_task->id) && isset($edit_task->include_postypes) && $edit_task->include_postypes != '') $cpt_checked=true;
 						?>
-						<p><input type="checkbox" name="knews_get_cpt" value="1" autocomplete="off" /> Get only from this Custom Post Types:</p>
+						<p><input type="checkbox" name="knews_get_cpt" value="1" <?php if ($cpt_checked) echo 'checked="checked"'; ?> autocomplete="off" /> <?php _e('Get only from this Custom Post Types:','knews'); ?></p>
 						<?php
-						echo '<div class="knews_hidden_cpt">';
+						echo '<div class="knews_hidden_cpt"' . ($cpt_checked ? ' style="display:block" ' : '') . '>';
 						echo '<select size="6" multiple="multiple" name="knews_cpt[]">';
 
 					}
-					echo '<option value="' . $pt['name'] . '"> ' . $pt['label'] . '</option>';
+
+					$selected=false; 
+					if (isset($edit_task->id) && isset($edit_task->include_postypes) && in_array($pt['name'], explode(',', $edit_task->include_postypes)) ) $selected=true;
+
+					echo '<option value="' . $pt['name'] . '" ' . ($selected ? 'selected="selected"' : '') . '> ' . $pt['label'] . '</option>';
 				}
 				if ($howmany != 0) echo '</select></div>';
 
 				//$cats = get_categories(array('hide_empty' => 0));
 				if (count($cats) > 0 || !$Knews_plugin->im_pro()) {
 				?>
-				<div class="knews_radios_cat">
+				<div class="knews_radios_cat" <?php if ($cpt_checked) echo ' style="display:none"'; ?>>
+					<?php
+					$f_cats = 'all'; $cats_to_select = array(); 
+					if (isset($edit_task->id) && isset($edit_task->include_cats) && $edit_task->include_cats != '') {
+						$f_cats = 'include';
+						$cats_to_select = explode(',', $edit_task->include_cats);
+					} elseif (isset($edit_task->id) && isset($edit_task->exclude_cats) && $edit_task->exclude_cats != '') {
+						$f_cats = 'exclude';
+						$cats_to_select = explode(',', $edit_task->exclude_cats);						
+					}
+					?>
 					<p>
 					<input type="radio" name="knews_get_categories" value="all" checked="checked" autocomplete="off" /> Get from all categories<br />
 					<input type="radio" name="knews_get_categories" value="include" autocomplete="off" /> Get from this categories:<br />
 					<input type="radio" name="knews_get_categories" value="exclude" autocomplete="off" /> Exclude this categories:
 					</p>
-					<div class="knews_hidden_cat">
+					<div class="knews_hidden_cat" <?php if ($f_cats != 'all') echo ' style="display:block"'; ?>>
 						<select size="6" multiple="multiple" name="knews_categories[]">
 						<?php
 						foreach ($cats as $c) {
-							echo '<option value="' . $c->term_id . '">' . $c->name . '</option>';
+
+							$selected=false; 
+							if (in_array($c->term_id, $cats_to_select) ) $selected=true;
+							echo '<option value="' . $c->term_id . '" ' . ($selected ? 'selected="selected"' : '') . '>' . $c->name . '</option>';
 						}
 						?>
 						</select>
@@ -382,17 +470,29 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 				//$tags = get_tags(array('hide_empty' => 0));
 				if (count($tags) > 0 || !$Knews_plugin->im_pro()) {
 				?>
-				<div class="knews_radios_tags">
+				<div class="knews_radios_tags" <?php if ($cpt_checked) echo ' style="display:none"'; ?>>
+					<?php
+					$f_tags = 'all'; $tags_to_select = array(); 
+					if (isset($edit_task->id) && isset($edit_task->include_tags) && $edit_task->include_tags != '') {
+						$f_tags = 'include';
+						$tags_to_select = explode(',', $edit_task->include_tags);
+					} elseif (isset($edit_task->id) && isset($edit_task->exclude_tags) && $edit_task->exclude_tags != '') {
+						$f_tags = 'exclude';
+						$tags_to_select = explode(',', $edit_task->exclude_tags);						
+					}
+					?>
 					<p>
-					<input type="radio" name="knews_get_tags" value="all" checked="checked" autocomplete="off" /> Get from all tags<br />
-					<input type="radio" name="knews_get_tags" value="include" autocomplete="off" /> Get from this tags:<br />
-					<input type="radio" name="knews_get_tags" value="exclude" autocomplete="off" /> Exclude this tags:
+					<input type="radio" name="knews_get_tags" value="all" <?php if ($f_cats=='all') echo 'checked="checked"'; ?> autocomplete="off" /> <?php _e('Get from all tags', 'knews'); ?><br />
+					<input type="radio" name="knews_get_tags" value="include" <?php if ($f_cats=='include') echo 'checked="checked"'; ?> autocomplete="off" /> <?php _e('Get from this tags:', 'knews'); ?><br />
+					<input type="radio" name="knews_get_tags" value="exclude" <?php if ($f_cats=='exclude') echo 'checked="checked"'; ?> autocomplete="off" /> <?php _e('Exclude this tags:', 'knews');?>
 					</p>
-					<div class="knews_hidden_tags">
+					<div class="knews_hidden_tags" <?php if ($f_tags != 'all') echo ' style="display:block"'; ?>>
 						<select size="6" multiple="multiple" name="knews_tags[]">
 						<?php
 						foreach ($tags as $t) {
-							echo '<option value="' . $t->term_id . '">' . $t->name . '</option>';
+							$selected=false; 
+							if (in_array($t->term_id, $tags_to_select) ) $selected=true;
+							echo '<option value="' . $t->term_id . '" ' . ($selected ? 'selected="selected"' : '') . '>' . $t->name . '</option>';
 						}
 						?>
 						</select>
@@ -400,35 +500,67 @@ if ($Knews_plugin->get_safe('tab')!='autoresponders') {
 				</div>
 				<?php
 				}
+
+				$checked = false;
+				if (isset($edit_task->id) && isset($edit_task->use_post_embed_pref) && $edit_task->use_post_embed_pref == '0') $checked=true;
 				?>
-				<p><input type="checkbox" name="knews_ignore_post_opt" value="1" autocomplete="off" /> Ignore the Knews Automation post setting (posts will be embeded if the above conditions are met)</p>
+				<p><input type="checkbox" name="knews_ignore_post_opt" value="1" <?php if ($checked) echo 'checked="checked"'; ?> autocomplete="off" /> <?php _e('Ignore the Knews Automation post setting (posts will be embeded if the above conditions are met)', 'knews'); ?></p>
 				<h3><?php _e('Newsletter submit options','knews'); ?></h3>
 				<?php
 				if (count($lists_name) != 0) {
 					?>
 					<p><label for="auto_target"><?php _e('Target for newsletter:','knews');?></label> 
-					<select name="auto_target" id="auto_target">
 					<?php
+					$t = array();
 					foreach ($lists_name as $ln) {
-						echo '<option value="' . $ln->id . '">' . $ln->name . '</option>';
+						$t[$ln->id] = $ln->name;
 					}
+					knews_select('auto_target', $t, $edit_task, 'target_id');
 					?>
-					</select>
 					</p>
 					<?php
 				} else {
-					echo '<p>' . __('Error: there are no mailing lists','knews'). '</p>';
+					echo '<p style="color:#f00">' . __('Error: there are no mailing lists','knews'). '</p>';
 				}
 				?>
-				<p><label for="auto_auto"><?php _e('Submit method:','knews');?></label> <select name="auto_auto" id="auto_auto"><option value="0" selected="selected"><?php _e('Manual submit','knews');?></option><option value="1"><?php _e('Automated submit','knews');?></option></select></p>
-<p><?php _e('E-mails sent at once','knews');?>: <select name="emails_at_once"><option value="2">2 <?php _e('test mode','knews');?></option><option value="10">10</option><option value="25">25</option><option value="50" selected="selected">50 <?php _e('(normal)','knews');?></option><option value="100">100</option><option value="250">250 <?php _e('(high performance SMTP)','knews');?></option><option value="500">500 <?php _e('(high performance SMTP)','knews');?></option></select> <span class="at_once_preview">300</span> per hour.</p>
+				<p><label for="auto_submit_time"><?php _e('Hour to start the submission:','knews');?></label> <input type="text" name="auto_submit_time" id="auto_submit_time" value="<?php echo (isset($edit_task->submit_time) ? $edit_task->submit_time : '00:00'); ?>" style="width:60px" /> (<?php printf(__('insert the time into your local time, now is: %s', 'knews'), date('H:i', current_time('timestamp'))); ?>)</p>
+				<p><label for="auto_auto"><?php _e('Submit method:','knews');?></label> 
+				<?php
+				knews_select('auto_auto', array('0' => __('Manual submit','knews'), '1' => __('Automated submit','knews')), $edit_task, 'auto');
+				?>				
+				</p>
+<p><labels for="emails_at_once"><?php _e('E-mails sent at once:','knews');?></label>
+				<?php
+				$speed = array(
+					'2' => '2 ' . __('test mode','knews'),
+					'10' => '10',
+					'25' => '25',
+					'50' => '50 ' . __('(normal)','knews'),
+					'100' => '100',
+					'250' => '250 ' . __('(high performance SMTP)','knews'),
+					'500' => '500 ' . __('(high performance SMTP)','knews'),
+				);
+				if (defined('KNEWS_CUSTOM_SPEED')) $speed = array_merge(array(KNEWS_CUSTOM_SPEED => KNEWS_CUSTOM_SPEED), $speed);
+				if (!isset($edit_task->id) && defined('KNEWS_CUSTOM_SPEED')) $edit_task->emails_at_once = KNEWS_CUSTOM_SPEED;
+				if (!isset($edit_task->id) && !defined('KNEWS_CUSTOM_SPEED')) $edit_task->emails_at_once = 50;
+
+				knews_select('emails_at_once', $speed, $edit_task, 'emails_at_once');
+				?> <span class="at_once_preview"><?php echo $edit_task->emails_at_once * 6; ?></span> per hour.</p>
 <?php if ($Knews_plugin->im_pro()) {
-if ($selector = $Knews_plugin->get_smtp_selector()) {
-	echo '<p>Use the SMTP: ' . $selector . '</p>';
+$smtp_selected = ''; if (isset($edit_task->id) && isset($edit_task->id_smtp)) $smtp_selected=$edit_task->id_smtp;
+
+if ($selector = $Knews_plugin->get_smtp_selector($smtp_selected)) {
+	echo '<p><label for="knews_select_smtp">' . __('Use the SMTP: ', 'knews') . '</label> ' . $selector . '</p>';
 }
 ?>
 <?php } ?>
-				<p><input type="submit" value="<?php _e('New Auto-create Newsletters Process','knews'); ?>" class="button-primary" /></p>
+				<p><input type="submit" value="<?php 
+				if (!isset($edit_task->id)) {
+					_e('New Auto-create Newsletters Process','knews');
+				} else {
+					_e('Update Auto-creation process','knews');
+				}
+				?>" class="button-primary" /></p>
 				<?php 
 				//Security for CSRF attacks
 				wp_nonce_field($knews_nonce_action, $knews_nonce_name); 
@@ -456,7 +588,6 @@ if ($selector = $Knews_plugin->get_smtp_selector()) {
 				<table class="widefat">
 					<thead>
 						<tr>
-							<?php /*<th class="manage-column column-cb check-column"><input type="checkbox" /></th>*/ ?>
 							<th align="left"><?php _e('autoresponder process name','knews');?></th>
 							<th><?php _e('Event','knews');?></th>
 							<th><?php _e('Suscribed to','knews');?></th>
@@ -473,47 +604,49 @@ if ($selector = $Knews_plugin->get_smtp_selector()) {
 					$results_counter=0;
 					foreach ($results as $automated) {
 						$results_counter++;
-						//if ($results_per_page * ($paged-1)<$results_counter) {
-							echo '<tr' . (($alt) ? ' class="alt"' : '') . '>'; //<th class="check-column"><input type="checkbox" name="batch_' . $list->id . '" value="1"></th>';
-							echo '<td class="name_' . $automated->id  . '"><strong>' . $automated->name . '</strong>';
-							
-							echo '<div class="row-actions"><span><a title="' . __('Activate/deactivate the automated task', 'knews') . '" href="admin.php?page=knews_auto&activated=' . (($automated->paused==1) ? '0' : '1') . '&tab=autoresponders&idauto=' . $automated->id . '">' . (($automated->paused==1) ? __('Activate', 'knews') : __('Deactivate', 'knews')) . '</a> | </span>';
 
-							echo '<span class="trash"><a href="admin.php?page=knews_auto&tab=autoresponders&da=delete&idauto=' . $automated->id . '" title="' . __('Delete definitively this automated task', 'knews') . '" class="submitdelete">' . __('Delete', 'knews') . '</a></span></div>';
+						echo '<tr' . (($alt) ? ' class="alt"' : '') . '>';
 
-							echo '</td><td>';
-							echo $automated->event;
-							echo '</td><td>';
+						echo '<td class="name_' . $automated->id  . '"><strong>' . $automated->name . '</strong>';
+						
+						echo '<div class="row-actions"><span><a title="' . __('Edit the automated task details', 'knews') . '" href="admin.php?page=knews_auto&tab=autoresponders&edit=1&idauto=' . $automated->id . '#editauto">' . __('Edit task', 'knews') . '</a> | </span>';
 
-							if ($automated->target_id==0) {
-								echo __('All','knews');
-							} else {
-								foreach ($lists_name as $ln) {
-									if ($ln->id==$automated->target_id) {
-										echo $ln->name;
-										break;
-									}
-								}
-							}
-							echo '</td>';
-							echo '<td>' . (($automated->lang=='') ? 'All' : $automated->lang) . '</td><td>';
-							foreach ($news as $n) {
-								if ($n->id==$automated->newsletter_id) {
-									echo $n->name;
+						echo '<span><a title="' . __('Activate/deactivate the automated task', 'knews') . '" href="admin.php?page=knews_auto&activated=' . (($automated->paused==1) ? '0' : '1') . '&tab=autoresponders&idauto=' . $automated->id . '">' . (($automated->paused==1) ? __('Activate', 'knews') : __('Deactivate', 'knews')) . '</a> | </span>';
+
+						echo '<span class="trash"><a href="admin.php?page=knews_auto&tab=autoresponders&da=delete&idauto=' . $automated->id . '" title="' . __('Delete definitively this automated task', 'knews') . '" class="submitdelete">' . __('Delete', 'knews') . '</a></span></div>';
+
+						echo '</td><td>';
+						echo $automated->event;
+						echo '</td><td>';
+
+						if ($automated->target_id==0) {
+							echo __('All','knews');
+						} else {
+							foreach ($lists_name as $ln) {
+								if ($ln->id==$automated->target_id) {
+									echo $ln->name;
 									break;
 								}
 							}
-							echo '</td>';
-							echo '<td>' . (($automated->paused==1) ? __('Off', 'knews') : __('On', 'knews')) . '</td>';
-							echo '<td>' . $automated->delay . ' ' . $automated->delay_unit . '</td>';
+						}
+						echo '</td>';
+						echo '<td>' . (($automated->lang=='') ? 'All' : $automated->lang) . '</td><td>';
+						foreach ($news as $n) {
+							if ($n->id==$automated->newsletter_id) {
+								echo $n->name;
+								break;
+							}
+						}
+						echo '</td>';
+						echo '<td>' . (($automated->paused==1) ? '<span style="color:#f00">' . __('Off', 'knews') . '</span>' : __('On', 'knews')) . '</td>';
+						echo '<td>' . $automated->delay . ' ' . $automated->delay_unit . '</td>';
 
-							echo '<td><a href="#" class="knews_details knews_alert_click" title="';
-							echo $automated->emails_at_once * 6 . ' emails per hour sent' . "\r\n";
-							if (isset($all_smtp[$automated->id_smtp])) echo 'It will be sent from: ' . $all_smtp[$automated->id_smtp]['from_mail_knews'];
-							echo '">+</a></td></tr>';
-						//}
+						echo '<td><a href="#" class="knews_details knews_alert_click" title="';
+						echo $automated->emails_at_once * 6 . ' emails per hour sent' . "\r\n";
+						if (isset($all_smtp[$automated->id_smtp])) echo 'It will be sent from: ' . $all_smtp[$automated->id_smtp]['from_mail_knews'];
+						echo '">+</a></td></tr>';
+
 						$alt=!$alt;
-						//if ($results_counter == $results_per_page * $paged) break;
 					}
 					?>
 					</tbody>
@@ -556,26 +689,51 @@ if ($selector = $Knews_plugin->get_smtp_selector()) {
 			}
 			?><p>&nbsp;</p>
 			<hr />
-			<a id="newauto"></a>
-			<h2><?php _e('New autoresponder','knews');?> <a href="http://www.knewsplugin.com/knews-have-autoresponders/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Autoresponders Tutorial','knews'); ?></a></h2>
-
+			<?php
+			$edit_task = new stdClass();
+			if ($Knews_plugin->get_safe('edit')=='1' && $Knews_plugin->get_safe('idauto') != '') {
+				foreach ($results as $result) {
+					if ($result->id == $Knews_plugin->get_safe('idauto')) {
+						$edit_task = $result;
+						break;
+					}
+				}
+				if (isset($edit_task)) {
+				?>
+					<a id="editauto"></a>
+					<h2><?php _e('Editing autoresponder process:','knews'); echo ' ' . $edit_task->name; ?> <a href="http://www.knewsplugin.com/knews-have-autoresponders/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Autoresponders Tutorial','knews'); ?></a></h2>
+				<?php
+				} else {
+				?>
+					<a id="editauto"></a>
+					<h2><?php _e('New autoresponder','knews');?> <a href="http://www.knewsplugin.com/knews-have-autoresponders/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Autoresponders Tutorial','knews'); ?></a></h2>
+					<div class="notice"><?php _e('Selected task not found.','knews'); ?></div>
+				<?php
+				}
+			} else {
+			?>
+				<a id="newauto"></a>
+				<h2><?php _e('New autoresponder','knews');?> <a href="http://www.knewsplugin.com/knews-have-autoresponders/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px;" target="_blank"><?php _e('Autoresponders Tutorial','knews'); ?></a></h2>
+			<?php
+			}
+			?>
 			<form method="post" action="admin.php?page=knews_auto&tab=autoresponders" id="create_autoresponder">
+				<?php 
+				if (isset($edit_task->id)) {
+				?>
+				<input type="hidden" name="action" id="action" value="edit_autoresponder" />
+				<input type="hidden" name="edit_auto_id" id="action" value="<?php echo $edit_task->id; ?>" />
+				<?php } else { ?>
 				<input type="hidden" name="action" id="action" value="add_autoresponder" />
-				<p><label for="auto_name"><?php _e('autoresponder name:','knews');?> </label><input type="text" name="auto_name" id="auto_name" class="regular-text" /></p> 
+				<?php } ?>
+				<p><label for="auto_name"><?php _e('Autoresponder name:','knews');?> </label><input type="text" name="auto_name" id="auto_name" value="<?php if (isset($edit_task->name)) echo $edit_task->name; ?>" class="regular-text" /></p> 
 
 				<p><label for="auto_event"><?php _e('Event:','knews');?></label> 
-				<select name="auto_event" id="auto_event">
-					<option value="not_confirmed"><?php _e('Not confirmed','knews'); ?></option>
-					<option value="after_confirmation"><?php _e('After confirmation','knews'); ?></option>
-				</select></p>
+				<?php knews_select('auto_event', array('not_confirmed' => __('Not confirmed','knews'), 'after_confirmation' => __('After confirmation','knews')), $edit_task, 'event'); ?></p>
 				
-				<p><label for="auto_delay"><?php _e('Delay:','knews');?> *</label> <input type="text" name="auto_delay" id="auto_delay" value="1" style="text-align:right; width:30px;" />
-				<select name="auto_delay_unit" id="auto_delay_unit">
-					<option value="minutes"><?php _e('minutes','knews'); ?></option>
-					<option value="hours"><?php _e('hours','knews');?></option>
-					<option value="days" selected="selected"><?php _e('days','knews'); ?></option>
-					<option value="weeks"><?php _e('weeks','knews'); ?></option>
-				</select><br />
+				<p><label for="auto_delay"><?php _e('Delay:','knews');?> *</label> <input type="text" name="auto_delay" id="auto_delay" value="<?php echo (isset($edit_task->delay)) ? $edit_task->delay : '1'; ?>" style="text-align:right; width:30px;" />
+
+				<?php knews_select('auto_delay_unit', array('minutes' => __('minutes','knews'), 'hours' => __('hours','knews'), 'days' => __('days','knews'), 'weeks' => __('weeks','knews')), $edit_task, 'delay'); ?><br />
 				<?php _e ('* Not confirmed autoresponder should have some delay, otherwise the subscribers will recieve the autoresponder without time to confirm','knews'); ?></p>
 				
 				<p><label for="auto_newsletter"><?php _e('Use as template:','knews');?></label> 
@@ -587,61 +745,93 @@ if ($selector = $Knews_plugin->get_smtp_selector()) {
 					}
 				}
 				if (count($disponible_news) != 0) {
-					echo '<select name="auto_newsletter" id="auto_newsletter">';
+					$disp_news=array();
 					foreach ($disponible_news as $n) {
-						echo '<option value="' . $n->id . '"' . (($Knews_plugin->get_safe('id')==$n->id) ? ' selected="selected"' : '') . '>' . $n->name . ' (' . $n->lang . ')</option>';
+						$disp_news[$n->id] = $n->name . ' (' . $n->lang . ')';
 					}
-					echo '</select></p>';
+					if (!isset($edit_task->id) && $Knews_plugin->get_safe('id') != '') $edit_task->newsletter_id = $Knews_plugin->get_safe('id');
+					knews_select('auto_newsletter', $disp_news, $edit_task, 'newsletter_id');
+
+					echo '</p>';
 				} else {
-					echo __('You must first create a newsletter as must shown (remove all %the_content%, %the_title% etc.)','knews') . '</p>';
+					echo '<span style="color:#f00">' . __('You must first create a newsletter as must shown (remove all %the_content%, %the_title% etc.)','knews') . '</span></p>';
 				}
 				if (count($lists_name) != 0) {
 					?>
 					<p><label for="auto_target"><?php _e('Only for users suscribed to:','knews');?></label> 
-					<select name="auto_target" id="auto_target">
 					<?php
-					echo '<option value="0">' . __('All','knews') . '</option>';
+					$lists=array('0' => __('All','knews'));
 					foreach ($lists_name as $ln) {
-						echo '<option value="' . $ln->id . '">' . $ln->name . '</option>';
+						$lists[$ln->id] = $ln->name;
 					}
+					knews_select('auto_target', $lists, $edit_task, 'target_id');
 					?>
-					</select>
 					</p>
 					<?php
 				} else {
-					echo '<p>' . __('Error: there are no mailing lists','knews'). '</p>';
+					echo '<p style="color:#f00">' . __('Error: there are no mailing lists','knews'). '</p>';
 				}
 				?>
 				<?php
 				if (count($languages) > 1) {
 					
-					echo '<p><label for="auto_lang">' . __('Only for users who speak the language:','knews') . '</label> <select name="auto_lang" id="auto_lang" autocomplete="off">';
-					echo '<option value="" selected="selected">All</option>';
-					foreach($languages as $l){
-						echo '<option value="' . $l['language_code'] . '">' . $l['translated_name'] . '</option>';
+					echo '<p><label for="auto_lang">' . __('Only for users who speak the language:','knews') . '</label> ';
+					
+					$langs=array('' => __('All','knews'));
+					foreach ($languages as $lg) {
+						$langs[$lg['language_code']] = $lg['translated_name'];
 					}
-					echo '</select></p>';
+					knews_select('auto_lang', $langs, $edit_task, 'lang');
+					
+					echo '</p>';
 		
 				} else if (count($languages) == 1) {
 					foreach ($languages as $l) {
 						echo '<input type="hidden" name="auto_lang" id="auto_lang" value="' . $l['language_code'] . '" />';
 					}
 				} else {
-					echo  '<p>' . __('Error','knews') . ": " . __('Language not detected!','knews') . '</p>';
+					echo  '<p style="color:#f00">' . __('Error','knews') . ": " . __('Language not detected!','knews') . '</p>';
 				}
 				?>
 				</p>
-<div id="at_once"><p><?php _e('E-mails sent at once','knews');?>: <select name="emails_at_once"><option value="2">2 <?php _e('test mode','knews');?></option><option value="10">10</option><option value="25">25</option><option value="50" <?php if (!defined('KNEWS_CUSTOM_SPEED')) echo 'selected="selected"'; ?>>50 <?php _e('(normal)','knews');?></option><option value="100">100</option><option value="250">250 <?php _e('(high performance SMTP)','knews');?></option><option value="500">500 <?php _e('(high performance SMTP)','knews');?></option>
-<?php if (defined('KNEWS_CUSTOM_SPEED')) echo '<option value="' . KNEWS_CUSTOM_SPEED . '" selected="selected">' . KNEWS_CUSTOM_SPEED . '</option>'; ?>
-</select> <span class="at_once_preview"><?php if (defined('KNEWS_CUSTOM_SPEED')) echo KNEWS_CUSTOM_SPEED; else echo '300'; ?></span> per hour.</p>
+<div id="at_once"><p>
+				<?php 
+				echo '<label for="emails_at_once">' . __('E-mails sent at once:','knews') . '</label> ';
+				$at_once = array(
+					'2' => '2 ' . __('test mode','knews'),
+					'10' => '10',
+					'25' => '25',
+					'50' => '50 ' . __('(normal)','knews'),
+					'100' => '100',
+					'250' => '250 ' . __('(high performance SMTP)','knews'),
+					'500' => '500 ' . __('(high performance SMTP)','knews')
+				);
+				if (defined ('KNEWS_CUSTOM_SPEED')) $at_once[KNEWS_CUSTOM_SPEED] = KNEWS_CUSTOM_SPEED . ' ' . __('(custom speed)','knews');
+
+				if (!isset($edit_task->id)) {
+					$edit_task->emails_at_once = defined ('KNEWS_CUSTOM_SPEED') ? KNEWS_CUSTOM_SPEED : 50;
+				}
+
+				knews_select('emails_at_once', $at_once, $edit_task, 'emails_at_once');
+				?>
+<span class="at_once_preview"><?php if (defined('KNEWS_CUSTOM_SPEED')) echo KNEWS_CUSTOM_SPEED * 6; else echo '300'; ?></span> per hour.</p>
 </div>
 <?php if ($Knews_plugin->im_pro()) {
-if ($selector = $Knews_plugin->get_smtp_selector()) {
-	echo '<p>Use the SMTP: ' . $selector . '</p>';
+
+$smtp_selected = ''; if (isset($edit_task->id) && isset($edit_task->id_smtp)) $smtp_selected=$edit_task->id_smtp;
+
+if ($selector = $Knews_plugin->get_smtp_selector($smtp_selected)) {
+	echo '<p><label for="knews_select_smtp">' . __('Use the SMTP: ', 'knews') . '</label> ' . $selector . '</p>';
 }
 ?>
 <?php } ?>
-				<p><input type="submit" value="<?php _e('New autoresponder','knews'); ?>" class="button-primary" /></p>
+				<p><input type="submit" value="<?php 
+				if (!isset($edit_task->id)) {
+					_e('New autoresponder','knews');
+				} else {
+					_e('Update autoresponder','knews');
+				}
+				?>" class="button-primary" /></p>
 				<?php 
 				//Security for CSRF attacks
 				wp_nonce_field($knews_nonce_action, $knews_nonce_name); 

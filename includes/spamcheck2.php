@@ -29,7 +29,7 @@ a.boto:hover {
 	$unique = isset($_GET['unique']) ? $_GET['unique'] : 0;
 
 	echo '<p>' . __('Shipping done.','knews') . '</p>';
-	echo '<p><a href="http://knewsplugin.com/spamcheck/check.php?site=' . urlencode($site) . '&unique=' . $unique . '" class="boto">SEE RESULT</a></p>';
+	echo '<p><a href="' . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on' ? 'https://' : 'http://') . 'knewsplugin.com/spamcheck/check.php?site=' . urlencode($site) . '&unique=' . $unique . '" class="boto">SEE RESULT</a></p>';
 ?>
 </body>
 </html>

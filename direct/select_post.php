@@ -23,7 +23,7 @@ if ($Knews_plugin) {
 		$template_id = $Knews_plugin->get_safe('tempid', 'unknown');
 		return apply_filters( 'knews_excerpt_length_' . $template_id, $length );
 	}
-	add_filter( 'excerpt_length', 'knews_custom_excerpt_length_fn', 1, 999 );
+	add_filter( 'excerpt_length', 'knews_custom_excerpt_length_fn', 999, 1 );
 
 	function get_post_knews ($reply, $id, $type, $lang, $template_id = 'unknown') {
 		
@@ -83,8 +83,8 @@ if ($Knews_plugin) {
 		
 		$featimg = '';
 		if ($Knews_plugin->im_pro()) {
-			if (has_post_thumbnail( $post->ID ) ) {
-				$featimg = knews_get_image_path();
+			if (has_post_thumbnail( $id ) ) {
+				$featimg = knews_get_image_path($id);
 			}
 		}
 
@@ -265,20 +265,49 @@ function select_post(n, lang, type) {
 
 		$post_types = array('post'=>array('name'=>'post', 'caption'=>'Posts'),'page'=>array('name'=>'page', 'caption'=>'Pages'));
 		$post_types = apply_filters( 'knews_post_types_' . $template_id, $post_types );
-		if ($Knews_plugin->im_pro()) {
-			$all_types = apply_filters('knews_get_cpt', $post_types );
-		}
-		//print_r($all_types);
-		if (!in_array($type, array_keys($all_types))) $type = $post_types[0]['name'];
 
-		foreach (array_keys($post_types) as $pt) {
-			//print_r($post_types);
+		$all_types = array();
+		foreach ($post_types as $pt) {
+			if (!is_array($pt)) $pt = array('name'=>$pt, 'caption'=>ucfirst($pt) );
+			$all_types[$pt['name']] = $pt;
+		}
+
+		if ($Knews_plugin->im_pro()) {
+			//$post_types = $Knews_plugin->getCustomPostTypes();
+			$knews_get_cpt = apply_filters('knews_get_cpt', array() );
+			foreach ($knews_get_cpt as $pt) {
+				if ($pt['manual']==1) $all_types[$pt['name']] = array('name' => $pt['name'], 'caption' => $pt['label']);
+			}
+		}
+
+		if (!in_array($type, array_keys($all_types)) ) {
+			$type = reset($all_types);
+			$type = $type['name'];
+		}
+		$tabs_show=0;
+		foreach (array_keys($all_types) as $pt) {
+			$tabs_show++;
+			if ($tabs_show < 3 || count($all_types) < 6 ) {
 			$tab_caption = $pt;
-			if (isset($post_types[$pt]['caption'])) $tab_caption = $post_types[$pt]['caption'];
+			if (isset($all_types[$pt]['caption'])) $tab_caption = $all_types[$pt]['caption'];
 			echo (($type==$pt) ? '<a class="on"' : '<a') . ' href="' . $url_base . '?action=knewsSelPost&type=' . $pt . '&tempid=' . $template_id . '&lang=' . $lang . '">' . __($tab_caption, 'knews') . '</a>';
 		}
-		// echo (($type=='post') ? '<a class="on"' : '<a') . ' href="' . $url_base . '?action=knewsSelPost&type=post&lang=' . $lang . '">' . __('Posts','knews') . '</a>';
-		// echo (($type=='page') ? '<a class="on"' : '<a') . ' href="' . $url_base . '?action=knewsSelPost&type=page&lang=' . $lang . '">' . __('Pages','knews') . '</a>';
+		}
+		if (count($all_types) > 5) {
+			echo '<select onchange="window.location.href=this.options[this.selectedIndex].value" style="float:right">';
+			
+			$tabs_show=0;
+			foreach (array_keys($all_types) as $pt) {
+				$tabs_show++;
+				if ($tabs_show > 2 ) {
+					$tab_caption = $pt;
+					if (isset($all_types[$pt]['caption'])) $tab_caption = $all_types[$pt]['caption'];
+
+					echo '<option ' . (($type==$pt) ? 'selected="selected" ' : '') . ' value="' . $url_base . '?action=knewsSelPost&type=' . $pt . '&tempid=' . $template_id . '&lang=' . $lang . '">' . __($tab_caption, 'knews') . '</option>';						
+				}
+			}
+			echo '</select>';
+		}
 
 		echo '</div>';
 		
@@ -318,7 +347,7 @@ function select_post(n, lang, type) {
 		echo '<input type="hidden" name="type" value="' . $type . '">';
 		echo '<input type="hidden" name="tempid" value="' . $template_id . '">';
 		echo '<input type="hidden" name="action" value="knewsSelPost">';
-		echo '<input type="text" name="s" value="" class="texte">';
+		echo '<input type="text" name="s" value="' . $s . '" class="texte">';
 		echo '<input type="submit" value="' . __('Search','knews') . '" class="button" />';
 		echo '</form>';
 		echo '</div>';
@@ -340,7 +369,7 @@ function select_post(n, lang, type) {
 		//global $wp_query; 
 		if (isset($myposts['found_posts'])) {
 	echo '<div class="tablenav bottom">';
-			knews_pagination($paged, ceil($myposts['found_posts']/ 10), $myposts['found_posts'], $url_base . '?action=knewsSelPost&lang=' . $lang . '&type=' . $type  . '&tempid=' . $template_id . '&cat=' . $cat . '&orderbt=' . $orderbt . '&order=' . $order);
+			knews_pagination($paged, ceil($myposts['found_posts']/ 10), $myposts['found_posts'], $url_base . '?action=knewsSelPost&lang=' . $lang . '&type=' . $type  . '&tempid=' . $template_id . '&cat=' . $cat . '&orderbt=' . $orderbt . '&order=' . $order . '&s=' . $s);
 	echo '</div>';
 		}
 	?>

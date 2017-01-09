@@ -10,9 +10,6 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 </script>
 <![endif]-->
 
-<script type="text/javascript" src="<?php echo KNEWS_URL; ?>/wysiwyg/parent_editor.js?ver=<?php echo KNEWS_VERSION; ?>"></script>
-
-<link rel="stylesheet" href="<?php echo KNEWS_URL; ?>/wysiwyg/parent_editor.css?ver=<?php echo KNEWS_VERSION; ?>" type="text/css" media="all" />
 <?php
 	$query = "SELECT * FROM ".KNEWS_NEWSLETTERS." WHERE id=" . $id_edit;
 	$results_news = $wpdb->get_results( $query );
@@ -30,6 +27,7 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 		$subject=$results_news[0]->subject;
 		$newstype=$results_news[0]->newstype;
 		$template_id=$results_news[0]->template;
+		$predefined_colours = apply_filters('knews_predefined_colours_' . $template_id, array() );
 ?>
 <script type="text/javascript">
 	url_plugin = '<?php echo KNEWS_URL; ?>';
@@ -88,7 +86,7 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 				<label for="title" id="title-prompt-text" style="" class="hide-if-no-js"><?php _e('Subject','knews'); ?></label>
 				<input type="text" autocomplete="off" id="title" value="<?php echo $subject; ?>" tabindex="1" size="30" name="post_title">
 			</div>
-			<h2 class="nav-tab-wrapper"><a href="#" title="<?php _e('Editing newsletter','knews'); ?>:" style="text-decoration:none; color:#000;">&gt;</a> <?php echo $title; ?>&nbsp;&nbsp;&nbsp;
+			<h2 class="nav-tab-wrapper knews-editor-tab-wrapper"><span class="knews_title"><a href="#" title="<?php _e('Editing newsletter','knews'); ?>:" style="text-decoration:none; color:#000;">&gt;</a> <?php echo $title; ?></span>
 			<?php
 			if ($parentid==0) {
 				echo '<a href="#" class="nav-tab nav-tab-active">' . __('Desktop version','knews') . '</a>';
@@ -150,7 +148,7 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 					<div class="resultats_test_pro"></div>
 					<div class="save_button">
 						<p><a <?php echo ($Knews_plugin->im_pro()) ? ' href="#" onClick="spam_check(); return false;" ' : ' href="admin.php?page=knews_config&tab=pro" target="_blank" '; ?> class="button" ><?php _e('Real Spam Test','knews');?></a> <a href="http://knewsplugin.com/real-spam-test-for-smtp-configuration-and-newsletters/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:15px; vertical-align:middle;" target="_blank" rel="noreferrer" title="About Real Spam Test"></a>
-						<a href="#" class="button-primary" onClick="save_news(); return false;" style="float:right;"><?php _e('Save','knews');?></a></a>
+						<a href="#" class="button-primary" onClick="save_news(); return false;" style="float:right;"><?php _e('Save','knews');?></a>
 					</div>
 					<div class="plegable">
 					<?php 
@@ -201,6 +199,9 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 							<a href="#" class="undo" title="undo" onclick="b_simple('undo'); return false;">U</a>
 							<a href="#" class="redo" title="redo" onclick="b_simple('redo'); return false;">R</a>
 						</div>
+						<div class="standard_buttons desactivada">
+							<a href="#" class="clean" title="clean format" onclick="b_clean(); return false;">C</a>
+						</div>
 						<div>
 							<a href="#" class="htmledit" title="HTML edit" onclick="b_htmledit(); return false;">H</a>
 						</div>
@@ -229,6 +230,31 @@ alert('<?php _e("Warning! IE 6/7 can't edit newsletters! The editor uses HTML5 p
 				<div class="drag_preview"></div>
 			</div>
 		</div>
+	</div>
+	<div id="knews_dialog_color" style="display:none;">
+		<div class="rightcol">
+			<div class="default_colours">
+			<?php
+			$colours = array ('#ffffff','#CCCCCC','#999999','#666666','#333333','#000000','#FFAAAA','#FF0000','#7F0000','#ffd4aa','#ff7f00','#7f3f00','#ffffaa','#ffff00','#7f7f00','#aaffaa','#00ff00','#007f00','#aaffff','#00ffff','#007f7f','#aad4ff','#007fff','#003f7f','#5656ff','#d4aaff','#aa56ff','#3f007f','#ff56ff','#7f007f','#ffaad4','#ff007f','#7f003f');
+
+			foreach ($predefined_colours as $c) {
+				echo '<a href="#" style="background:' . $c . '" onClick="set_colour_default(this); return false;" title="' . $c  . '"></a>';
+			}
+			
+			if (count($predefined_colours) != 0) echo '<span class="divider"></span>';
+			
+			foreach ($colours as $c) {
+				echo '<a href="#" style="background:' . $c . '" onClick="set_colour_default(this); return false;" title="' . $c  . '"></a>';
+			} 
+			?>
+			<span class="divider"></span>
+				<input type="button" value="OK" onclick="CallBackColour(jQuery('#colorpickerVal').val()); tb_remove(); return false;" class="bt_ok">
+				<input type="button" value="OK" onclick="CallBackColourEditor(jQuery('#colorpickerVal').val()); tb_remove(); return false;" class="bt_ed_ok">
+				<input type="button" value="CANCEL" onclick="tb_remove(); return false;">
+			</div>
+		</div>
+		<p>Color: <input type="text" id="colorpickerVal" value="#000000" /></p>
+		<div id="colorpicker"></div>
 	</div>
 <?php
 	//Security for CSRF attacks

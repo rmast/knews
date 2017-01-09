@@ -73,7 +73,9 @@ div.knews_stats div.table_float {
 }
 div.knews_stats div.pie_float {
 	float:left;
-	width:350px;
+	width:400px;
+	height:260px;
+	overflow:hidden;
 }
 .rtl div.knews_stats div.pie_float,
 .rtl div.knews_stats div.table_float {
@@ -122,12 +124,11 @@ div.knews_stats div.clear {
 }
 div.knews_stats div.pregunta {
 	width:850px;
+	height:350px;
+	overflow:hidden;
 }
-div.knews_stats div.pregunta div {
+div.knews_stats div.pregunta div.off {
 	display:none;
-}
-div.knews_stats div.pregunta div.on {
-	display:block;
 }
 div.knews_stats div.error,
 div.knews_stats div.updated {
@@ -322,3 +323,4 @@ div.pestanyes {
 div.pregunta textarea {
 	background:#fff;
 }
+

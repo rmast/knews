@@ -12,6 +12,7 @@ var cursive_type='';
 var flash_wysiwyg_first=true;
 var preview_img=false;
 var preview_css=false;
+var pre_paste_range = null;
 
 //function start() {
 parent.jQuery(document).ready( function () {
@@ -38,11 +39,13 @@ parent.jQuery(document).ready( function () {
 	/*parent.jQuery('.droppable_empty', document)
 		.live('mouseover', function() {*/
 	live_fn_1 = function() {
+		if (parent.modal_opened) return;				
 		parent.droppable_over=this;
 		parent.jQuery(this).addClass('droppable_empty_hover');
 	}
 	//.live('mouseout', function() {
 	live_fn_2 = function() {
+		if (parent.modal_opened) return;				
 		parent.droppable_over=null;
 		parent.jQuery(this).removeClass('droppable_empty_hover');
 	}
@@ -308,6 +311,33 @@ parent.jQuery(document).ready( function () {
 		});*/
 
 //}
+
+	/* clean paste */
+	parent.jQuery(document).on('paste','span.content_editable', function(e) {
+	
+		if (inside_editor) {
+			
+			if (e.originalEvent && e.originalEvent.clipboardData && e.originalEvent.clipboardData.getData) {
+				console.log('Mozilla clipboardData');
+				text = e.originalEvent.clipboardData.getData('text/plain');
+
+			} else if (window.clipboardData) {
+				console.log('IE clipboardData');
+				text = window.clipboardData.getData('Text');
+
+			} else {
+				console.log('denied access clipboard');
+				parent.saved_range=saveSelection();
+				parent.jQuery("#paste", document).val('').focus();
+				setTimeout('wait_paste(0)', 100);
+				return false;
+			}
+			safe_insertText(text);
+			update_editor();
+			return false;
+		}
+	});
+
 });
 
 function look_attr(obj, nameattr) {
@@ -384,10 +414,13 @@ function listen_module (module) {
 			
 			parent.jQuery('.droppable_empty', document).children().html('&nbsp;');
 			
-			if (parent.zone != 0) {
+			if (parent.zone.length != 0) {
 				parent.jQuery('body', document).addClass('doing_drag');
 				parent.jQuery('.droppable_empty', document).hide();
-				parent.jQuery('.container_zone_' + parent.zone + ' .droppable_empty', document).show();
+
+				parent.jQuery.each(parent.zone, function( i, z ) {
+					parent.jQuery('.container_zone_' + z + ' .droppable_empty', document).not('.container_zone_' + z + ' .droppable .droppable_empty', document).show();
+				})
 			} else {
 				parent.jQuery('body', document).addClass('doing_drag');
 				parent.jQuery('.droppable_empty', document).show();
@@ -408,7 +441,7 @@ function listen_module (module) {
 	parent.jQuery(module).mouseover( function(e) {
 			yy=parseInt(parent.jQuery(this).offset().top, 10)-30;
 			if (yy<3) yy=3;
-			parent.jQuery('span.handler', this)
+			parent.jQuery('span.handler', this).not('table span.handler')
 				.css('left', parseInt(parent.jQuery(this).offset().left, 10))
 				.css('top', yy);
 			//;
@@ -658,6 +691,8 @@ function update_editor() {
 	}
 	if (inside_editor) {
 
+		if (tags != '') tags = '<a href="#" onclick="partial_html(); return false;" title="Edit this HTML section" class="html">HTML</a> ' + tags;
+
 		parent.jQuery('#tagsnav').html(tags);
 		parent.jQuery('#botonera a.color').css('backgroundColor', '#' + parent.rgb2hex(parent.jQuery(find_tag(current_node)).css('color')));
 		parent.jQuery('#botonera div.standard_buttons').removeClass('desactivada');
@@ -708,9 +743,36 @@ function b_color(hex) {
 		if (im_on_link) {
 			parent.jQuery(link_node).css('color',hex);
 		} else {
-			document.execCommand('ForeColor',false, hex);
+			document.execCommand('createlink',false,'http://www.forecolor.com/temporary');
+			container = parent.jQuery(find_tag(current_node));
+			parent.jQuery('a', container).each(function() {
+				if (parent.jQuery(this).attr('href')=='http://www.forecolor.com/temporary') {
+					text = parent.jQuery(this).html();
+					font = '<font color="' + hex + '">' + text + '</font>';
+					if (text!='') parent.jQuery(this).replaceWith(font);
+				}
+			});
+			//document.execCommand('ForeColor',false, hex);
 		}
 		restore_focus();
+	}
+}
+function b_clean() {
+	if (inside_editor) {
+		//container = parent.jQuery(find_tag(current_node));
+		
+		container = parent.jQuery(find_tag(current_node));
+		
+		if (parent.jQuery('*', container).length == 0)
+			container = parent.jQuery(container).parent();
+		
+		if (parent.jQuery('span.content_editable', container).length != 0)
+			container = parent.jQuery('span.content_editable', container);
+
+		parent.jQuery('*:not(a, img)', container).contents().unwrap();
+
+		restore_focus();
+		update_editor();
 	}
 }
 function b_simple(action) {
@@ -725,7 +787,7 @@ function b_simple(action) {
 function b_insertText(text) {
 	if (inside_editor) {
 		//container = parent.jQuery(find_tag(info_node().commonAncestorContainer)).closest('span.content_editable');
-		var returnValue = document.execCommand('insertText',false,text);
+		safe_insertText(text);
 		firefox_separate(current_editor);
 		restore_focus();
 		update_editor();
@@ -930,3 +992,48 @@ function clean_resize_handlers() {
 	parent.jQuery('div.plegable').show();
 }
 
+function wait_paste(n) {
+	console.log('val: ' + parent.jQuery('#paste', document).val());
+	if (parent.jQuery('#paste', document).val() != '') {
+
+		restore_focus();
+		safe_insertText(parent.jQuery('#paste', document).val());
+		update_editor();
+
+	} else {
+		n = parseInt(n,10); n++;
+		if (n<4) {
+			setTimeout('wait_paste(' + n + ')', 100);
+		} else {
+			console.log('fail paste');
+			restore_focus();
+			restoreSelection(parent.saved_range);
+			update_editor();
+		}
+	}
+}
+
+function safe_insertText(replacementText) {
+	console.log(replacementText);
+	console.log(parent.navigator.sayswho);
+	if (parent.navigator.sayswho[0] != 'MSIE') {
+		console.log('NO IE. ' + parent.navigator.sayswho[0]);
+		document.execCommand('insertText', false, replacementText);
+		return;
+	}
+	console.log('IE');
+    var sel, range;
+    if (window.getSelection) {
+		console.log(window.getSelection);
+        sel = window.getSelection();
+        if (sel.rangeCount) {
+            range = sel.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(replacementText));
+        }
+    } else if (document.selection && document.selection.createRange) {
+		console.log(document.selection);
+        range = document.selection.createRange();
+        range.text = replacementText;
+    }
+}

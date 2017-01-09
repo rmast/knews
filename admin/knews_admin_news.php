@@ -29,9 +29,11 @@
 		$newstype = $Knews_plugin->post_safe('newstype');
 		$name = $Knews_plugin->post_safe('new_news');
 		$lang = $Knews_plugin->post_safe('lang');
-		$path_template = $Knews_plugin->post_safe('path_' . $Knews_plugin->post_safe('template'));
 
-		$url_template = $Knews_plugin->post_safe('url_' . $Knews_plugin->post_safe('template'));
+		$template_id = $Knews_plugin->post_safe('template');
+		$path_template = $Knews_plugin->post_safe('path_' . $template_id);
+
+		$url_template = $Knews_plugin->post_safe('url_' . $template_id);
 
 		$blog_url = get_option('home');
 		
@@ -72,11 +74,9 @@
 					
 					if ($mobile) $newstype = $results[0]->newstype;
 					
-					$template = $Knews_plugin->post_safe('template');
+					if ($template_id != '') {
 	
-					if ($template != '') {
-	
-						//$fileTemplate = $path_template . $Knews_plugin->post_safe('template') . (($mobile) ? '/mobile.html' : '/template.html');
+						//$fileTemplate = $path_template . $template_id . (($mobile) ? '/mobile.html' : '/template.html');
 						$fileTemplate = $path_template . (($mobile) ? '/mobile' : '/template');
 						if (is_file($fileTemplate . '.php')) {
 							$fileTemplate .= '.php';
@@ -87,6 +87,16 @@
 						$codeTemplate = fread($fh, filesize($fileTemplate));
 						fclose($fh);
 		
+
+						$skin_name = $Knews_plugin->post_safe('skin_' . $template_id);
+						$skins = apply_filters('knews_skins_' . $template_id, array());
+						if ($skin_name != '' && isset($skins[$skin_name])) {
+							$codeTemplate = str_replace('%skin_imagepath%', $skins[$skin_name]['imagepath'], $codeTemplate);
+							foreach ($skins[$skin_name]['colours'] as $key=>$val) {
+								$codeTemplate = str_replace('%skin_colour_' . ($key+1) . '%', $val, $codeTemplate);
+							}
+						}
+
 						$codeTemplate = knews_extract_code('<?php', '?>', $codeTemplate, true);
 
 						$codeTemplate = str_replace('  ', ' ', $codeTemplate);
@@ -137,8 +147,8 @@
 						$bodyTemplate = str_replace($bodyTag, '', $bodyTemplate);
 						$bodyTemplate = str_replace('</body>', '', $bodyTemplate);
 	
-						//$bodyTemplate = str_replace('"images/', '"' . $url_template . $Knews_plugin->post_safe('template') . '/images/', $bodyTemplate);
-						//$bodyTemplate = str_replace('url(images', 'url(' . $url_template . $Knews_plugin->post_safe('template') . '/images/', $bodyTemplate);
+						//$bodyTemplate = str_replace('"images/', '"' . $url_template . $template_id . '/images/', $bodyTemplate);
+						//$bodyTemplate = str_replace('url(images', 'url(' . $url_template . $template_id . '/images/', $bodyTemplate);
 						$bodyTemplate = str_replace('"images/', '"' . $url_template . '/images/', $bodyTemplate);
 						$bodyTemplate = str_replace('url(images', 'url(' . $url_template . '/images/', $bodyTemplate);
 		
@@ -149,8 +159,8 @@
 							if (strpos($bodyTemplate, '[start module ' . ($count_modules + 1) . ']') !== false) {
 								$found_module=true;
 	
-								//$codeModule .= '<div class="insertable"><img src="' . $url_template . $Knews_plugin->post_safe('template') . '/modules/' . ($mobile ? 'm_' : '') . 'module' . $Knews_plugin->post_safe('vp_' . $Knews_plugin->post_safe('template')) . '_' . ($count_modules + 1) . '.jpg" width="220" height="90" alt="" /><div class="html_content">';
-								$codeModule .= '<div class="insertable"><img src="' . $url_template . '/modules/' . ($mobile ? 'm_' : '') . 'module' . $Knews_plugin->post_safe('vp_' . $Knews_plugin->post_safe('template')) . '_' . ($count_modules + 1) . '.jpg" width="220" height="90" alt="" /><div class="html_content">';
+								//$codeModule .= '<div class="insertable"><img src="' . $url_template . $template_id . '/modules/' . ($mobile ? 'm_' : '') . 'module' . $Knews_plugin->post_safe('vp_' . $template_id) . '_' . ($count_modules + 1) . '.jpg" width="220" height="90" alt="" /><div class="html_content">';
+								$codeModule .= '<div class="insertable"><img src="' . $url_template . '/modules/' . ($mobile ? 'm_' : '') . 'module' . $Knews_plugin->post_safe('vp_' . $template_id) . '_' . ($count_modules + 1) . '.jpg" width="220" height="90" alt="" /><div class="html_content">';
 								
 								$extracted_module = knews_cut_code('<!--[start module ' . ($count_modules + 1) . ']-->', '<!--[end module ' . ($count_modules + 1) . ']-->', $bodyTemplate, true);
 								$codeModule .= $extracted_module . '</div></div>';
@@ -179,7 +189,7 @@
 						$headTemplate = esc_sql($Knews_plugin->htmlentities_corrected($headTemplate));
 						$codeModule = esc_sql($Knews_plugin->htmlentities_corrected($codeModule));
 	
-						$sql = "INSERT INTO " . KNEWS_NEWSLETTERS . "(name, created, modified, template, html_mailing, html_head, html_bodytag, html_modules, html_container, subject, lang, automated, mobile, id_mobile, newstype) VALUES ('" . $name . "', '" . $date . "', '" . $date . "','" . $template . "','" . $bodyTemplate . "','" . $headTemplate . "','" . $bodyTag . "','" . $codeModule . "','" . $containerModulesTemplate . "','', '" . $Knews_plugin->post_safe('lang') . "', 0, " . (($mobile) ? "1" : "0") . ", 0, '" . $newstype . "')";
+						$sql = "INSERT INTO " . KNEWS_NEWSLETTERS . "(name, created, modified, template, html_mailing, html_head, html_bodytag, html_modules, html_container, subject, lang, automated, mobile, id_mobile, newstype) VALUES ('" . $name . "', '" . $date . "', '" . $date . "','" . $template_id . "','" . $bodyTemplate . "','" . $headTemplate . "','" . $bodyTag . "','" . $codeModule . "','" . $containerModulesTemplate . "','', '" . $Knews_plugin->post_safe('lang') . "', 0, " . (($mobile) ? "1" : "0") . ", 0, '" . $newstype . "')";
 						if ($wpdb->query($sql)) {
 							$id_edit = $Knews_plugin->real_insert_id();
 							

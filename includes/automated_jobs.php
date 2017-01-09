@@ -21,7 +21,7 @@ if ($Knews_plugin) {
 		$template_id = $Knews_plugin->get_safe('tempid', 'unknown');
 		return apply_filters( 'knews_excerpt_length_' . $template_id, $length );
 	}
-	add_filter( 'excerpt_length', 'knews_custom_excerpt_length_fn', 1, 999 );
+	add_filter( 'excerpt_length', 'knews_custom_excerpt_length_fn', 999, 1 );
 
 	if ($knewsOptions['write_logs']=='yes') {
 		$hour = date('d-m-Y_H-i', current_time('timestamp'));
@@ -433,8 +433,8 @@ function knews_create_news($aj, $pend_posts, $news, $fp, $mobile, $mobile_news_i
 				
 				knews_debug('- included: ' . $pp->post_title . "\r\n");
 				
-				if ($most_recent==0) $most_recent = $Knews_plugin->sql2time($pp->post_modified);
-				if ($most_recent < $Knews_plugin->sql2time($pp->post_modified)) $most_recent = $Knews_plugin->sql2time($pp->post_modified);
+				if ($most_recent==0) $most_recent = $Knews_plugin->sql2time($pp->post_modified_gmt);
+				if ($most_recent < $Knews_plugin->sql2time($pp->post_modified_gmt)) $most_recent = $Knews_plugin->sql2time($pp->post_modified_gmt);
 				$query = "INSERT INTO " . KNEWS_AUTOMATED_POSTS . " (id_automated, id_post, when_scheduled, id_news) VALUES (" . $aj->id . ", ". $pp->ID . ", '" . $Knews_plugin->get_mysql_date() . "', " . "0)";
 				$result=$wpdb->query($query);
 			}
@@ -482,18 +482,29 @@ function knews_create_news($aj, $pend_posts, $news, $fp, $mobile, $mobile_news_i
 			
 			$query = "SELECT DISTINCT(" . KNEWS_USERS . ".id) FROM " . KNEWS_USERS . ", " . KNEWS_USERS_PER_LISTS . " WHERE " . KNEWS_USERS . ".id=" . KNEWS_USERS_PER_LISTS . ".id_user AND " . KNEWS_USERS . ".state='2' AND " . KNEWS_USERS_PER_LISTS . ".id_list=" . $aj->target_id;
 
+			$local_time = current_time('timestamp');
+			$local_hour = date( 'H', $local_time);
+			$local_minute = date( 'i', $local_time);
+			$submit_hour = intval(substr($aj->submit_time, 0, 2));
+			$submit_minute = intval(substr($aj->submit_time, 3, 2));
+			
+			if ($submit_hour < $local_hour || ($submit_hour == $local_hour && $submit_minute < $local_minute )) {
+				//Today is too late, in localised time, let's wait to tomorrow to send.
+				$local_time += 60*60*24;
+			}
+
 			$batch_opts = array (
-				'minute' => date("i", time()),
-				'hour' => date("H", time()),
-				'day' => date("d", time()),
-				'month' => date("m", time()),
-				'year' => date("Y", time()),
+				'minute' => $submit_minute,
+				'hour' => $submit_hour,
+				'day' => date("d", $local_time),
+				'month' => date("m", $local_time),
+				'year' => date("Y", $local_time),
 				'paused' => (($aj->auto==1) ? 0 : 1),
 				'priority' => 4,
 				'strict_control' => '',
 				'emails_at_once' => $aj->emails_at_once,
 				'id_smtp' => $aj->id_smtp,
-				'timezone' => 'utc'
+				'timezone' => 'local'
 			);
 								
 			require( KNEWS_DIR . "/includes/submit_batch.php");

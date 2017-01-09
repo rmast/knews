@@ -14,6 +14,8 @@ var mouseBtn=false;
 var move_item=null;
 var move_preview=false;
 var droppable_over=null;
+var copy_item=null;
+var modal_opened=false;
 
 var referer_module;
 var post_number_module;
@@ -64,12 +66,21 @@ var save_var_values={};
 var is_saved=true;
 var knews_save_before='';
 
+var farbtasticPicker='';
+
+var previous_editor_scroll_pos=-1;
+
 navigator.sayswho= (function(){
     var N= navigator.appName, ua= navigator.userAgent, tem;
     var M= ua.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d+(\.\d+)*)/i);
     if(M && (tem= ua.match(/version\/([\.\d]+)/i))!= null) M[2]= tem[1];
     M= M? [M[1], M[2]]: [N, navigator.appVersion, '-?'];
 
+	if (M[0] != 'MSIE' && navigator.userAgent.match(/Trident\//)) {
+		M[0] = 'MSIE';
+		if ((tem= ua.match(/rv:([\.\d]+)/i))!= null) M[1]= tem[1];		
+	};
+	debug_alert('The Knews Debugging mode is turned on.', M);
     return M;
 })();
 
@@ -82,6 +93,9 @@ function dontstart () { return false; }
 jQuery(window).load(function() {
 	//console.log(navigator.sayswho);
 	if (navigator.sayswho[0]=='Opera') alert(opera_no);
+
+	jQuery('div.notice, div.error, div.updated, div.update-nag, #update-nag').fadeOut('slow');
+	jQuery('#wpbody-content').css('padding-bottom',0);
 
 	if (jQuery('#title').val() == "") jQuery('#title-prompt-text').show();
 	jQuery('#title')
@@ -159,6 +173,9 @@ jQuery(window).load(function() {
 			
 		jQuery(document)
 			.mousemove(function(e){
+
+				if (modal_opened) return;				
+
 				ratoliX=e.pageX - ratoli_offset_left;
 				ratoliY=e.pageY - magic_offset; // - 100;
 				
@@ -167,15 +184,26 @@ jQuery(window).load(function() {
 				//if (move_preview) e.preventDefault();
 			})
 			.mousedown(function(){
+
+				if (modal_opened) return;				
+
 				ratoli_offset_left = parseInt(jQuery('#wpcontent').css('marginLeft'), 10);
 				mouseBtn=true;
 			})
 			.mouseup(function(){
+
+				if (modal_opened) return;				
+
 				editor_mouseup();
 			})
 		
 		jQuery('div.insertable img')
 			.mousedown( function(e) {
+				
+				if (modal_opened) return;				
+				
+				pre_height = jQuery('body', io).innerHeight();
+
 				jQuery('.droppable_empty', io).children().html('&nbsp;');
 				
 				copy_item=jQuery('div.html_content', jQuery(this).parent() );
@@ -185,16 +213,25 @@ jQuery(window).load(function() {
 				update_preview();
 		
 				zone=look_zone(jQuery(copy_item).children(':first'));
-				if (zone != 0) {
+				if (zone.length != 0) {
 					jQuery('body', io).addClass('doing_drag');
 					jQuery('body').addClass('doing_drag');
 					jQuery('.droppable_empty', io).hide();
-					jQuery('.container_zone_' + zone + ' .droppable_empty', io).show();
+
+					jQuery.each(zone, function( i, z ) {
+						jQuery('.container_zone_' + z + ' .droppable_empty', io).not('.container_zone_' + z + ' .droppable .droppable_empty', io).show();
+					})
 				} else {
 					jQuery('body', io).addClass('doing_drag');
 					jQuery('body').addClass('doing_drag');
 					jQuery('.droppable_empty', io).show();
 				}
+				
+				previous_editor_scroll_pos = jQuery(io).scrollTop();
+				post_height = jQuery('body', io).innerHeight();
+				
+				jQuery(io).scrollTop(Math.floor(previous_editor_scroll_pos * (post_height / pre_height) ));
+
 				//e.returnValue = false;
 				//e.cancelBubble=true; 
 				//window.event.returnValue = false;
@@ -209,20 +246,23 @@ jQuery(window).load(function() {
 			});
 
 		jQuery('div.wysiwyg_editor .droppable', io).each(function () {
+			obj = jQuery(this).clone();
+			jQuery('.droppable', obj).remove();
 	
-			colors_globals = look_colours('local', this);
-			fonts_locals = look_fonts('local', this);
+			colors_locals = look_colours('local', obj);
+			fonts_locals = look_fonts('local', obj);
 	
-			for (x=1; x <= colors_globals.length; x++) {
-				jQuery('span.handler', this).append('<a href="#" class="sel_color" title="' + colors_globals[x-1][1] + '" onclick="parent.sel_col(\'local\',' + x + ', this); return false;" style="background-color:' + colors_globals[x-1][0] + '"></a>');
+			for (x=1; x <= colors_locals.length; x++) {
+				jQuery('span.handler:first-child', this).append('<a href="#" class="sel_color" title="' + colors_locals[x-1][1] + '" onclick="parent.sel_col(\'local\',' + x + ', this); return false;" style="background-color:' + colors_locals[x-1][0] + '"></a>');
 			}
 			for (x=1; x <= fonts_locals.length; x++) {
-				jQuery('span.handler', this).append('<a href="#" class="sel_font" title="' + fonts_locals[x-1][4] + '" onclick="parent.sel_fon(\'local\',' + x + ', this); return false;"></a>');
+				jQuery('span.handler:first-child', this).append('<a href="#" class="sel_font" title="' + fonts_locals[x-1][4] + '" onclick="parent.sel_fon(\'local\',' + x + ', this); return false;"></a>');
 			}
 	
 			if (!look_posts(this)) {
 				//El fem editable si s'escau
 				jQuery('span.content_editable', this).attr('contenteditable','true');
+				jQuery('.droppable span.content_editable', this).attr('contenteditable','false');
 			}
 		});
 	
@@ -234,7 +274,7 @@ jQuery(window).load(function() {
 			return false;
 		});
 			
-		look_images(jQuery('div.wysiwyg_editor', io)[0]);
+		//look_images(jQuery('div.wysiwyg_editor', io)[0]);
 		
 		colors_globals = look_colours('global', io);
 		fonts_globals = look_fonts('global', io);
@@ -280,6 +320,8 @@ jQuery(window).load(function() {
 					//ratoliY_tb = parseInt(jQuery('div.wysiwyg_toolbar').offset().top, 10) + parseInt(jQuery(document).scrollTop(), 10) + parseInt(jQuery(parent.document).scrollTop(), 10);
 					ratoliY_tb = ratoliY - parseInt(jQuery('div.wysiwyg_toolbar div.plegable').css('height'), 10);
 	
+					jQuery('div.wysiwyg_toolbar div.plegable').addClass('resized');
+					
 					return false;
 				}
 			})
@@ -306,12 +348,15 @@ function resize_frame() {
 	//if (minH < 500) minH = 500;
 	
 	jQuery('iframe.knews_editor').css('height', winH);
+	if (!jQuery('div.wysiwyg_toolbar div.plegable').hasClass('resized')) jQuery('div.wysiwyg_toolbar div.plegable').css('height', winH-29);
 	
-	magic_offset = jQuery('div.wrap').position().top;
+	magic_offset = jQuery('div.wrap').offset().top;
 	iframe_pos=jQuery('#knews_editor').offset();
 }
 
 function update_preview() {
+	
+	if (modal_opened) return;				
 	
 	// Parche Safari
 	if (move_preview && navigator.sayswho[0]=='Safari') {
@@ -339,8 +384,8 @@ function update_preview() {
 		});
 	}
 	if (move_preview) {
-		jQuery('div.drag_preview').css('left', ratoliX + 10)
-		jQuery('div.drag_preview').css('top', ratoliY + 10 - magic_offset)
+		jQuery('div.drag_preview').css('left', ratoliX + 20)
+		jQuery('div.drag_preview').css('top', ratoliY + 50 - magic_offset)
 	}
 	
 	if (drag_toolbox) {
@@ -428,6 +473,9 @@ function update_preview() {
 }
 
 function editor_mouseup() {
+
+	if (modal_opened) return;				
+
 	jQuery('.droppable_empty', io).children().html('');
 
 	mouseBtn=false; resize_toolbox=false;
@@ -491,9 +539,17 @@ function editor_mouseup() {
 				if (typeof(save_var_values['<!--[start option ' + extract_name[0] + "]-->"]) !== 'undefined') value_chk=save_var_values["%input_" + extract_name[0] + "%"];
 
 				input_count++;
-				input_html = input_html + '<div><p><input type="checkbox" name="chk_' + input_count + '" id="chk_' + input_count + '"';
-				if (value_chk) input_html = input_html + ' checked="checked"';
-				input_html = input_html + '> ' + extract_name[0] + '<input type="hidden" name="code_' + input_count + '" id="code_' + input_count + '" value="' + extract_name[0] + '"><input type="hidden" name="type_' + input_count + '" id="type_' + input_count + '" value="check"></p>' ;
+				namelabel = extract_name[0];
+				if (namelabel.slice(-6)==' radio') {
+					namelabel=namelabel.slice(0,-6);
+					input_html = input_html + '<div><p><input type="radio" name="chk_1" value="' + input_count + '" id="chk_' + input_count + '"';
+					if (input_count==1) input_html = input_html + ' checked="checked"';
+					input_html = input_html + '> ' + namelabel + '<input type="hidden" name="code_' + input_count + '" id="code_' + input_count + '" value="' + extract_name[0] + '"><input type="hidden" name="type_' + input_count + '" id="type_' + input_count + '" value="check"></p>' ;
+				} else {
+					input_html = input_html + '<div><p><input type="checkbox" name="chk_' + input_count + '" id="chk_' + input_count + '"';
+					if (value_chk) input_html = input_html + ' checked="checked"';
+					input_html = input_html + '> ' + namelabel + '<input type="hidden" name="code_' + input_count + '" id="code_' + input_count + '" value="' + extract_name[0] + '"><input type="hidden" name="type_' + input_count + '" id="type_' + input_count + '" value="check"></p>' ;
+				}
 
 				var extract_var_tmp_0=tmp_split.split("<!--[end option ");
 				var extract_var_tmp_1=extract_var_tmp_0[0];
@@ -549,42 +605,59 @@ function editor_mouseup() {
 					jQuery('label', jQuery(this).closest('div')).hide();
 				}
 			});
-		}
+			modal_opened = true;
+			return false;
+		} else {
 		
-		not_saved();
-		//Copiem el contingut
-		clone_safe(copy_item.children(), jQuery(droppable_over).children());
-		//copy_item.children().clone().appendTo(jQuery(droppable_over).children());
-		
-		//Traiem el class del TR
-		jQuery(droppable_over).removeClass('droppable_empty_hover').removeClass('droppable_empty').addClass('droppable');
-
-		look_images(droppable_over);
-		
-		document.getElementById('knews_editor').contentWindow.listen_module(droppable_over);
-
-		colors_globals = look_colours('local', droppable_over);
-		fonts_locals = look_fonts('local', droppable_over);
-
-		for (x=1; x <= colors_globals.length; x++) {
-			jQuery('span.handler', droppable_over).append('<a href="#" class="sel_color" title="' + colors_globals[x-1][1] + '" onclick="parent.sel_col(\'local\',' + x + ', this); return false;" style="background-color:' + colors_globals[x-1][0] + '"></a>');
+			do_insertion_module();	
+			after_insertion_module();
 		}
-		for (x=1; x <= fonts_locals.length; x++) {
-			jQuery('span.handler', droppable_over).append('<a href="#" class="sel_font" title="' + fonts_locals[x-1][4] + '" onclick="parent.sel_fon(\'local\',' + x + ', this); return false;"></a>');
-		}
-
-		if (!look_posts(droppable_over)) {
-			//El fem editable si s'escau
-			jQuery('span.content_editable', droppable_over).attr('contenteditable','true');
-		}
-
-		//renovem els droppables
-		redraw_droppables();
 	
 	} else {
 		redraw_droppables();
+		}
+		
+	clean_preview();
+	
+	return false;
+}
+
+function do_insertion_module() {
+	not_saved();
+	//Copiem el contingut
+
+	clone_safe(copy_item.children(), jQuery(droppable_over).children());
+	//copy_item.children().clone().appendTo(jQuery(droppable_over).children());
+	
+	//Traiem el class del TR
+	jQuery(droppable_over).removeClass('droppable_empty_hover').removeClass('droppable_empty').addClass('droppable');
+}
+
+function after_insertion_module() {
+	//look_images(droppable_over);
+	
+	document.getElementById('knews_editor').contentWindow.listen_module(droppable_over);
+
+	colors_globals = look_colours('local', droppable_over);
+	fonts_locals = look_fonts('local', droppable_over);
+
+	for (x=1; x <= colors_globals.length; x++) {
+		jQuery('span.handler', droppable_over).append('<a href="#" class="sel_color" title="' + colors_globals[x-1][1] + '" onclick="parent.sel_col(\'local\',' + x + ', this); return false;" style="background-color:' + colors_globals[x-1][0] + '"></a>');
+	}
+	for (x=1; x <= fonts_locals.length; x++) {
+		jQuery('span.handler', droppable_over).append('<a href="#" class="sel_font" title="' + fonts_locals[x-1][4] + '" onclick="parent.sel_fon(\'local\',' + x + ', this); return false;"></a>');
 	}
 
+	if (!look_posts(droppable_over)) {
+		//El fem editable si s'escau
+		jQuery('span.content_editable', droppable_over).attr('contenteditable','true');
+	}
+
+	//renovem els droppables
+	redraw_droppables();
+}
+
+function clean_preview() {
 	//Esborrem el preview
 	jQuery('div.drag_preview').html('');
 	
@@ -598,7 +671,10 @@ function editor_mouseup() {
 	
 	jQuery('.droppable_empty', io).hide();
 	
-	return false;
+	if (previous_editor_scroll_pos != -1) {
+		jQuery(io).scrollTop(previous_editor_scroll_pos);
+		previous_editor_scroll_pos=-1;
+	}
 }
 
 function put_spaces(text) {
@@ -606,6 +682,10 @@ function put_spaces(text) {
 }
 
 function insert_vars() {
+
+	modal_opened = false;
+	do_insertion_module();
+	
 	code = jQuery(save_var_module_callback).html();
 	
 	for (var x=1; x<=parseInt(jQuery('#TB_ajaxContent #nfields').val(), 10); x++) {
@@ -619,14 +699,17 @@ function insert_vars() {
 	
 	for (var x=1; x<=parseInt(jQuery('#TB_ajaxContent #nfields').val(), 10); x++) {
 		if (jQuery('#TB_ajaxContent #type_' + x).val() == 'check') {
-			if (!jQuery('#TB_ajaxContent #chk_' + x).is(':checked')) {
+			if (!jQuery('#TB_ajaxContent #chk_' + x).is(':checked') && !jQuery('#TB_ajaxContent #chk_' + x).is(':selected') ) {
 				name = jQuery('#TB_ajaxContent #code_' + x).val();
 				name_1 = '<!--[start option ' + name + ']-->';
 				name_2 = '<!--[end option ' + name + ']-->';
 				
 				code_1 = code.split(name_1);
+				if (code_1.length != 2) alert("Error on module options labels");
+
 				code_2 = code_1[1];
 				code_2 = code_2.split(name_2);
+				if (code_2.length != 2) alert("Error on module options labels");
 				
 				code = code_1[0] + code_2[1];
 
@@ -643,6 +726,9 @@ function insert_vars() {
 	jQuery(save_var_module_callback).html(code);
 	document.getElementById('knews_editor').contentWindow.listen_module(save_var_module_callback);
 	tb_remove();
+
+	after_insertion_module();
+	clean_preview();
 }
 
 function sel_col(ambit, ncolour, obj) {
@@ -650,8 +736,16 @@ function sel_col(ambit, ncolour, obj) {
 	col_picker_number = ncolour;
 	col_picker_obj = obj;
 	if (ambit=='local') col_picker_referer = jQuery(obj).closest('.draggable');
-	debug_alert('We will get the URL:', url_admin + 'admin-ajax.php?action=knewsPickColor&hex=' + rgb2hex(jQuery(col_picker_obj).css('backgroundColor')));
-	tb_show('Color Picker', url_admin + 'admin-ajax.php?action=knewsPickColor&hex=' + rgb2hex(jQuery(col_picker_obj).css('backgroundColor')) + '&amp;TB_iframe=true&amp;width=545&amp;height=330');
+	debug_alert('WP Farbastic Picker');
+	//tb_show('Color Picker', url_admin + 'admin-ajax.php?action=knewsPickColor&hex=' + rgb2hex(jQuery(col_picker_obj).css('backgroundColor')) + '&amp;TB_iframe=true&amp;width=545&amp;height=330');
+	color=rgb2hex(jQuery(col_picker_obj).css('backgroundColor'));
+	tb_show("Color Picker", "#TB_inline?height=300&amp;width=400&amp;inlineId=knews_dialog_color");
+	jQuery('input.bt_ed_ok').hide(); jQuery('input.bt_ok').show(); 
+	if (farbtasticPicker=='') {
+		jQuery('#colorpicker').farbtastic("#colorpickerVal");
+		farbtasticPicker = jQuery.farbtastic('#colorpicker'); 
+	}
+	farbtasticPicker.setColor('#' + color); //set initial color
 }
 
 function sel_fon(ambit, nfont, obj) {
@@ -745,13 +839,6 @@ function redraw_droppables() {
 		}
 	});
 	resize_frame();
-}
-
-function look_images(obj) {
-	jQuery('img.editable', obj).each(function(index) {
-    	//1.1.0 jQuery(this).before('<span class="img_handler"><a href="#" class="change_image" title="' + edit_image + '"></a></span>');
-		//<a href="#" class="properties_image" title="' + properties_image + '"></a>
-	});
 }
 
 function look_colours(ambit, obj) {
@@ -883,15 +970,20 @@ function look_fonts(ambit, obj) {
 }
 
 function look_zone(obj) {
-	for (var x=0; x<11; x++) {
-		if (jQuery(obj).hasClass('zone_' + x)) return x;
+	zones=[];
+	for (var x=0; x<20; x++) {
+		if (jQuery(obj).hasClass('zone_' + x)) zones.push(x);
 	}
-	return 0;
+	return zones;
 }
 
 function look_posts(obj) {
 	
-	codi=jQuery(obj).html();
+	obj_aux = jQuery(obj).clone();
+	jQuery('.droppable', obj_aux).remove();
+	codi=jQuery(obj_aux).html();
+
+	any=false;
 	for (var x=1; x<11; x++) {
 		found=false;
 		//alert(codi.indexOf("%the_permalink_" + x + "%") != -1);
@@ -900,18 +992,12 @@ function look_posts(obj) {
 		if (codi.indexOf("%the_excerpt_" + x + "%") != -1) found=true;
 		
 		//alert(found);
-		if (!found) break;
-	}
-	if (x>1) {
-		for (var xx=1; xx<x; xx++) {
-			jQuery('span.chooser', obj).append('<a href="#" class="insert_post insert_post_' + xx + '" onclick="parent.insert_post(this, ' + xx + '); return false;" title="' + post_handler + ' (' + xx + ')"></a>' + 
-				'<a href="#" class="free_text free_text_' + xx + '" onclick="parent.free_text(this, ' + xx + '); return false;" title="' + free_handler + ' (' + xx + ')"></a>');			
+		if (found) {
+			any = true;
+			jQuery('span.chooser', obj).append('<a href="#" class="insert_post insert_post_' + x + '" onclick="parent.insert_post(this, ' + x + '); return false;" title="' + post_handler + ' (' + x + ')"></a>' + '<a href="#" class="free_text free_text_' + x + '" onclick="parent.free_text(this, ' + x + '); return false;" title="' + free_handler + ' (' + x + ')"></a>');						
 		}		
-		return true;
-
-	} else {
-		return false;
 	}
+	return any;
 }
 
 function absoluteReplace(string, strfind, strreplace) {
@@ -999,8 +1085,6 @@ function setCatcher(is_insertion) { //false by default
 		wp.media.editor.send.attachment = function( aux, input_media) {
 			media = aux;
 			for (var attrname in input_media) { media[attrname] = input_media[attrname]; }
-			console.log('wp.media.editor.send.attachment');
-			console.log(media);
 			if (is_insertion) {
 				document.getElementById('knews_editor').contentWindow.b_insert_image(media);
 			} else {
@@ -1282,6 +1366,11 @@ function CallBackColour(hex) {
 
 }
 
+function set_colour_default(obj) {
+	hex = rgb2hex(jQuery(obj).css('backgroundColor'));
+	farbtasticPicker.setColor('#' + hex);
+}
+
 function CallBackFont(ff, fs, ss, lh) {
 	not_saved();
 	parent.tb_remove();
@@ -1392,9 +1481,9 @@ function clean_before_save() {
 
 	jQuery('*', io).removeAttr('data-cfsrc').removeAttr('data-cfstyle');
 	
-	for (var x=1; x<10; x++) {
+	for (var x=1; x<20; x++) {
 		jQuery('.container_zone_' + x, io).each(function() {
-			if(jQuery('.droppable', this).length != 0) jQuery('.droppable_empty', this).remove();
+			if(jQuery('.droppable', this).length != 0) jQuery('.droppable_empty', this).not('.droppable .droppable_empty', this).remove();
 		});
 	}
 
@@ -1526,8 +1615,19 @@ function b_color() {
 	saved_range=document.getElementById('knews_editor').contentWindow.saveSelection();
 	not_saved();
 	if (document.getElementById('knews_editor').contentWindow.inside_editor) {
-		tb_show('Color Picker', url_admin + 'admin-ajax.php?action=knewsPickColor&hex=' + rgb2hex(jQuery('#botonera a.color').css('backgroundColor')) + '&amp;editor=1&amp;TB_iframe=true&amp;width=545&amp;height=330');
+		color=rgb2hex(jQuery('#botonera a.color').css('backgroundColor'));
+		tb_show("Color Picker", "#TB_inline?height=300&amp;width=400&amp;inlineId=knews_dialog_color");
+		jQuery('input.bt_ed_ok').show(); jQuery('input.bt_ok').hide(); 
+		if (farbtasticPicker=='') {
+			jQuery('#colorpicker').farbtastic("#colorpickerVal");
+			farbtasticPicker = jQuery.farbtastic('#colorpicker'); 
+		}
+		farbtasticPicker.setColor('#' + color); //set initial color
 	}
+}
+function b_clean() {
+	not_saved();
+	document.getElementById('knews_editor').contentWindow.b_clean();
 }
 function b_htmledit() {
 	if (referer_image_size != this && referer_image_size != '') {
@@ -1537,6 +1637,19 @@ function b_htmledit() {
 	if (!save_news_sem) {
 		tb_show('HTML Editor', url_admin + 'admin-ajax.php?action=knewsHTMLedit&amp;editor=1&amp;TB_iframe=true&amp;width=' + (parseInt(jQuery(parent.window).width(), 10)-100) + '&amp;height=' + (parseInt(jQuery(parent.window).height(), 10)-100) );
 	}
+}
+function partial_html() {
+	tb_show('HTML Editor', url_admin + 'admin-ajax.php?action=knewsHTMLedit&amp;editor=2&amp;TB_iframe=true&amp;width=' + (parseInt(jQuery(parent.window).width(), 10)-100) + '&amp;height=' + (parseInt(jQuery(parent.window).height(), 10)-100) );
+}
+function partial_html_populate() {
+	container = document.getElementById('knews_editor').contentWindow.find_tag(document.getElementById('knews_editor').contentWindow.current_node);
+	html = jQuery(container).closest('span.content_editable').html();
+	return html;
+}
+function partial_html_replace(html) {
+	container = document.getElementById('knews_editor').contentWindow.find_tag(document.getElementById('knews_editor').contentWindow.current_node);
+	jQuery(container).closest('span.content_editable').html(html);
+	document.getElementById('knews_editor').contentWindow.update_editor();	
 }
 function close_automated_menu() {
 	if (jQuery('div.automated_menu').hasClass('automated_menu_visible')) {
@@ -1607,6 +1720,7 @@ function CallBackColourEditor(hex) {
 	not_saved();
 	parent.tb_remove();
 	document.getElementById('knews_editor').contentWindow.b_color(hex);	
+	jQuery('div.standard_buttons a.color').css('background-color',hex);
 }
 function b_preview(what) {
 	not_saved();
@@ -1628,7 +1742,11 @@ function clone_safe(origen, destino) {
 }
 
 function debug_alert(msg, data) {
-	if (debug_knews) alert('The Knews Debugging mode is turned on.\r' + msg + '\r' + data);
+	if (typeof data != 'undefined') {
+		if (debug_knews) console.log( msg + ' : ' + JSON.stringify(data));
+	} else {
+		if (debug_knews) console.log( msg );
+	}
 }
 
 //Type selector

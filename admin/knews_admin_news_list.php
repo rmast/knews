@@ -259,7 +259,8 @@ function duplicate_news($results) {
 						<?php
 						knews_display_templates(); 
 						?>
-						<h3 style="clear:both">Type of newsletter</h3>
+						<div class="skin_opts" style="clear:both"></div>
+						<h3>Type of newsletter</h3>
 						<p><input type="radio" name="newstype" value="manual" checked="checked" /> Manual newsletter</p>
 						<p><input type="radio" name="newstype" value="autocreation" /> Newsletter for auto-creation <a href="<?php _e('http://www.knewsplugin.com/automated-newsletter-creation/','knews'); ?>" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:13px;" target="_blank"><?php _e('Auto-create Newsletters Tutorial','knews'); ?></a></p>
 						<p><input type="radio" name="newstype" value="autoresponder" /> Newsletter for autoresponder <a href="http://www.knewsplugin.com/knews-have-autoresponders/" style="background:url(<?php echo KNEWS_URL; ?>/images/help.png) no-repeat 5px 0; padding:3px 0 3px 30px; color:#0646ff; font-size:13px;" target="_blank"><?php _e('Autoresponders Tutorial','knews'); ?></a></p>

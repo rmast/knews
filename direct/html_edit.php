@@ -14,8 +14,10 @@ if ($Knews_plugin) {
 	<link rel="stylesheet" type="text/css" href="<?php echo KNEWS_URL; ?>/admin/styles.css" />
 	<link rel="stylesheet" type="text/css" href="<?php echo KNEWS_URL; ?>/includes/codemirror/codemirror.css" />
 	<script src="<?php echo KNEWS_URL; ?>/includes/codemirror/codemirror.js" type="text/javascript"></script>
+	<?php /*
 	<script src="<?php echo KNEWS_URL; ?>/includes/codemirror/xml.js" type="text/javascript"></script>
 	<script src="<?php echo KNEWS_URL; ?>/includes/codemirror/htmlmixed.js" type="text/javascript"></script>
+	*/ ?>
 
     <style type="text/css">
       .CodeMirror {border-top: 1px solid black; border-bottom: 1px solid black;}
@@ -27,6 +29,33 @@ if ($Knews_plugin) {
 		<textarea id="code" name="code"></textarea>
 		<p style="padding:10px 0 0 0; text-align:center; margin:0;"><input type="button" class="save knews-button-primary" value="Close and Save Changes" /> &nbsp; <input type="button" class="undo knews-button" value="Close and Discard Changes" /></p>
 	</form>
+<?php if (isset($_GET['editor'])  && $_GET['editor']=='2') {?>
+	<script type="text/javascript">
+	parent.jQuery(document).ready(function() {
+
+		var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+		  //mode: "text/html",
+		  lineNumbers: true,
+		  lineWrapping: true,
+		  tabMode: "indent"
+		});
+		code = parent.partial_html_populate();
+		console.log(code);
+		editor.setValue(code);
+		editor.setSize(parseInt(parent.jQuery(window).width(), 10)-15, parseInt(parent.jQuery(window).height(), 10)-60);
+
+		parent.jQuery('input.save', document).click(function() {
+			code=editor.getValue();			
+			parent.partial_html_replace(code);
+			parent.tb_remove();
+		});
+		
+		parent.jQuery('input.undo', document).click(function() {
+			parent.tb_remove();
+		});
+	});
+	</script>
+<?php } else { ?>
 	<script type="text/javascript">
 	parent.jQuery(document).ready(function() {
 
@@ -58,6 +87,7 @@ if ($Knews_plugin) {
 		});
 	});
 	</script>
+<?php } ?>
 	</body>
 	</html>
 <?php

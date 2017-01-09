@@ -15,7 +15,11 @@ global $Knews_plugin, $wpdb;
 
 if ($Knews_plugin) {
 
-	if (! $Knews_plugin->initialized) $Knews_plugin->init();
+	if (! $Knews_plugin->initialized) {
+		$Knews_plugin->init($Knews_plugin->get_safe('site_id', 0, 'int'));
+	} else {
+		if ($Knews_plugin->get_safe('site_id', 0, 'int') != 0) die();
+	}
 
 	$mysqldate = $Knews_plugin->get_mysql_date();
 	
@@ -26,11 +30,11 @@ if ($Knews_plugin) {
 		if ($_GET['img']=='testled') {
 			wp_redirect( KNEWS_URL . '/images/green_led.gif' ); exit;
 		}
-		$key_user = substr($Knews_plugin->get_safe('img'), 0, 8);
+		$key_user = substr($Knews_plugin->get_safe('img'), 0, strpos($Knews_plugin->get_safe('img'),'_'));
 		$key_submit = substr($Knews_plugin->get_safe('img'), -16);
 		$what=7;
 	} else {
-		$key_user = substr($Knews_plugin->get_safe('t'), 0, 8);
+		$key_user = substr($Knews_plugin->get_safe('t'), 0, strpos($Knews_plugin->get_safe('t'),'_'));
 		$key_submit = substr($Knews_plugin->get_safe('t'), -16);
 		$what=1;
 	}

@@ -111,20 +111,31 @@ jQuery(document).ready(function() {
 	jQuery('form.new_newsletter').submit(function() {
 		if (jQuery('#new_news').val()=='') {
 			jQuery('#new_news').focus();
-			jQuery('html, body').animate({scrollTop: parseInt(jQuery('#new_news').offset().top)-100}, 1000);
+			jQuery('html, body').animate({scrollTop: parseInt(jQuery('#new_news').offset().top, 10)-100}, 1000);
 			return false;
 		}
 	});
 	jQuery('form.new_newsletter div.template a').click( function() {
-		jQuery('html, body').animate({scrollTop: parseInt(jQuery('input[name="newstype"]').offset().top, 10)-200}, 1000);
+		jQuery('html, body').animate({scrollTop: parseInt(jQuery('input[name="newstype"]').offset().top, 10)-200}, 1000, function() {
+			jQuery('div.skin_opts').animate({'opacity': '1'});
+		});
+		update_skins();
 	});
 
 	jQuery('form.new_newsletter input[name="template"]').change( function() {
 		//alert(jQuery('input[name="newstype"]')[0].offset().top);
-		jQuery('html, body').animate({scrollTop: parseInt(jQuery('input[name="newstype"]').offset().top, 10)-200}, 1000);
+		jQuery('html, body').animate({scrollTop: parseInt(jQuery('input[name="newstype"]').offset().top, 10)-200}, 1000, function() {
+			jQuery('div.skin_opts').animate({'opacity': '1'});
+		});
+		update_skins();
 	});
 	
 });
+
+function update_skins() {
+	template = jQuery('input[name="template"]:checked').val();
+	jQuery('div.skin_opts').html(jQuery('div.skin_opts_' + template).html() ).css('opacity', '0.01');
+}
 
 /* manual news submit */
 jQuery(document).ready(function() {

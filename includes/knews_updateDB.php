@@ -4,6 +4,9 @@ require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
 global $wpdb, $knewsOptions, $Knews_plugin;
 
+if (version_compare(get_option('knews_version','0.0.0'), '1.8.2') < 0 || ( $this->im_pro() && version_compare(get_option('knews_version','0.0.0'), '2.4.1') < 0)) {
+	if (!knews_add_column(KNEWS_AUTOMATED, 'submit_time', "varchar(5) NOT NULL DEFAULT '00:00'")) return;
+}
 if (version_compare(get_option('knews_version','0.0.0'), '1.7.0') < 0 || ( $this->im_pro() && version_compare(get_option('knews_version','0.0.0'), '2.3.3') < 0)) {
 	//Some oldie installs keep twicedaily schedule instead hourly
 	if (wp_next_scheduled('knews_wpcron_automate_hook')) wp_clear_scheduled_hook('knews_wpcron_automate_hook');
@@ -47,7 +50,7 @@ if (version_compare(get_option('knews_version','0.0.0'), '1.1.0') < 0) {
 
 	if (!$this->tableExists(KNEWS_NEWSLETTERS_SUBMITS)) {
 	
-		$sql =	"CREATE TABLE " . KNEWS_NEWSLETTERS_SUBMITS . " (
+		$sql =	"CREATE TABLE " .KNEWS_NEWSLETTERS_SUBMITS . " (
 				id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				blog_id bigint(20) UNSIGNED NOT NULL DEFAULT " . $this->KNEWS_MAIN_BLOG_ID . ",
 				newsletter int(11) NOT NULL,
@@ -233,6 +236,17 @@ if (version_compare(get_option('knews_version','0.0.0'), '1.6.0') < 0 || ( $this
 if (version_compare(get_option('knews_version','0.0.0'), '1.6.4') < 0 || ( $this->im_pro() && version_compare(get_option('knews_version','0.0.0'), '2.2.6') < 0)) {
 	if (!knews_add_column(KNEWS_LISTS, 'auxiliary', "int(1) UNSIGNED NOT NULL DEFAULT '0'")) return;
 }
+
+if (version_compare(get_option('knews_version','0.0.0'), '1.7.7') < 0 || ( $this->im_pro() && version_compare(get_option('knews_version','0.0.0'), '2.3.8') < 0)) {
+	
+	$dismissed = explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) );
+
+	if ($knewsOptions['newsletter'] != 'no')	$dismissed[] = 'knews_newsletter';
+	if ($knewsOptions['config_knews'] != 'no')	$dismissed[] = 'knews_config_knews';
+	if ($knewsOptions['videotutorial'] != 'no')	$dismissed[] = 'knews_videotutorial';
+
+	update_user_meta( get_current_user_id(), 'dismissed_wp_pointers', implode(',',$dismissed) );
+}
 update_option('knews_version', KNEWS_VERSION);
 update_option('knews_advice_time', 0);
 $this->knews_admin_messages = sprintf("Knews updated the database successfully. Welcome to %s version.", KNEWS_VERSION);
@@ -266,16 +280,4 @@ function knews_add_column($table, $field, $typefield) {
 	}
 	return true;
 }
-
-
-function knews_update_hooks() {
-	//Reset hooks (bug in 1.2.0 - 1.2.3 versions)
-	if (wp_next_scheduled('knews_wpcron_function_hook')) wp_clear_scheduled_hook('knews_wpcron_function_hook');
-	if (wp_next_scheduled('knews_wpcron_automate_hook')) wp_clear_scheduled_hook('knews_wpcron_automate_hook');
-
-	if (!wp_next_scheduled('knews_wpcron_function_hook')) wp_schedule_event( time(), 'knewstime', 'knews_wpcron_function_hook');
-	if (!wp_next_scheduled('knews_wpcron_automate_hook')) wp_schedule_event( time(), 'hourly', 'knews_wpcron_automate_hook');
-}
-add_action('wp', 'knews_update_hooks');
-
 ?>
