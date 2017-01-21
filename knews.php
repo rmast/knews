@@ -711,8 +711,6 @@ if (!class_exists("KnewsPlugin")) {
 					if ($this->post_safe('knewskey') == $key) $stupid_bot = false;
 				}
 			}
-			if ($this->post_safe('knewscomment') != '') $stupid_bot = true;
-
 			//echo '<div class="response"><p>';
 
 			if (!$this->validEmail($email) || $stupid_bot) {
@@ -880,6 +878,24 @@ if (!class_exists("KnewsPlugin")) {
 				return false;
 			} else {
 				global $email_blacklist; $this->load_blacklist();
+				if (!class_exists("SpamProtection")){
+					require_once (KNEWS_DIR . '/includes/Types.php');
+					require_once (KNEWS_DIR . '/includes/SpamProtection.php');
+					$spamProtector = new SpamProtection();
+				}
+                                $hour = date('YmdHis', current_time('timestamp'));
+                                $filename = 'subscription_attempt_' . $hour . '_' . '.log';
+                                @$fp = fopen(KNEWS_DIR . '/tmp/' . $filename, 'a');
+                                if ($fp) fwrite($fp, $_SERVER['REMOTE_ADDR'] . ',' . $email . ',' . $this->post_safe('name') . ',' . $this->post_safe('knewscomment') . "\n" );
+                                if ($fp) fclose($fp);
+                                if ($spamProtector->check(Types::IP, $_SERVER['REMOTE_ADDR']) !== false) return false;
+                                @$fp = fopen(KNEWS_DIR . '/tmp/' . $filename, 'a');
+                                if ($fp) fwrite($fp, "voorbij IP\n" );
+                                if ($fp) fclose($fp);
+                                if ($spamProtector->check(Types::EMAIL, $email) !== false) return false;
+                                @$fp = fopen(KNEWS_DIR . '/tmp/' . $filename, 'a');
+                                if ($fp) fwrite($fp, "voorbij EMAIL\n" );
+                                if ($fp) fclose($fp);
 
 				$domain = explode('@',$email);
 				return (!in_array(strtolower($domain[1]), $email_blacklist));
